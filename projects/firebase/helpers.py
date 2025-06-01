@@ -15,3 +15,56 @@ def fetch_document_by_reference(ref_url):
         return response.json()
     else:
         raise Exception(f"Error al obtener {ref_url}: {response.status_code} - {response.text}")
+    
+def transformar_a_firestore_fields(data: dict) -> dict:
+
+    from datetime import datetime
+
+    firestore_fields = {}
+
+    for key, value in data.items():
+        if isinstance(value, datetime) or (isinstance(value, str) and "T" in value):
+            firestore_fields[key] = {
+                "timestampValue": value if isinstance(value, str) else value.isoformat() + "Z"
+            }
+
+        # Integer
+        elif isinstance(value, int):
+            firestore_fields[key] = {"integerValue": str(value)}
+
+        # Float
+        elif isinstance(value, float):
+            firestore_fields[key] = {"doubleValue": value}
+
+        # Boolean
+        elif isinstance(value, bool):
+            firestore_fields[key] = {"booleanValue": value}
+
+
+        elif isinstance(value, str) and value.startswith("projects/"):
+            firestore_fields[key] = {"referenceValue": value}
+
+        # Lista de referencias
+        elif isinstance(value, list) and all(isinstance(v, str) and v.startswith("projects/") for v in value):
+            firestore_fields[key] = {
+                "arrayValue": {
+                    "values": [{"referenceValue": v} for v in value]
+                }
+            }
+
+        # Lista de strings
+        elif isinstance(value, list) and all(isinstance(v, str) for v in value):
+            firestore_fields[key] = {
+                "arrayValue": {
+                    "values": [{"stringValue": v} for v in value]
+                }
+            }
+
+        # String normal
+        elif isinstance(value, str):
+            firestore_fields[key] = {"stringValue": value}
+
+        else:
+            raise ValueError(f"No se puede procesar el campo '{key}' con valor '{value}'")
+
+    return {"fields": firestore_fields}
