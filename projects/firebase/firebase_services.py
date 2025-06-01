@@ -158,9 +158,56 @@ def obtener_menu_de_la_semana(request):
 
     raise Exception("Método no permitido")
 
-def get_alumnos():
+def get_notas_alumno(request, uid):
     token = obtener_token_acceso()
-    url = os.getenv('URL_ALUMNOS')
+    url = f"{os.getenv('URL_ALUMNOS')}{uid}"
+
+    if request.method == "GET":
+        try:
+            query = {
+            "structuredQuery": {
+                "from": [{"collectionId": "notas"}],
+                "where": {
+                    "fieldFilter": {
+                        "field": {"fieldPath": "alumno"},
+                        "op": "EQUAL",
+                        "value": {
+                            "referenceValue": url
+                        }
+                    }
+                }
+            }
+        }
+
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            }
+            urlIndice = os.getenv('URL_INDICE')
+            response = requests.post(urlIndice, headers=headers, json=query)
+
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
+
+            notas_raw = response.json()
+            notas = [
+                {
+                    "descripcion": n["document"]["fields"]["descripcion"]["stringValue"],
+                    "fecha": n["document"]["fields"]["fecha"]["timestampValue"],
+                    "id": n["document"]["name"].split("/")[-1]
+                }
+                for n in notas_raw if "document" in n
+            ]
+
+            return notas
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+
+# def get_alumnos():
+#     token = obtener_token_acceso()
+#     url = os.getenv('URL_ALUMNOS')
 
     
 

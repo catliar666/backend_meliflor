@@ -2,7 +2,7 @@
 
 from django.http import JsonResponse
 from projects.firebase.auth import obtener_token_acceso
-from .firebase.firebase_services import get_usuario_completo, get_administradores_completo, obtener_menu_de_la_semana
+from .firebase.firebase_services import get_usuario_completo, get_administradores_completo, obtener_menu_de_la_semana, get_notas_alumno
 from .firebase.parsers.usuarios_parse import parse_usuario_document
 from .firebase.parsers.alumnos_parse import parse_alumno_document
 from django.views.decorators.csrf import csrf_exempt
@@ -38,6 +38,13 @@ def obtener_menu_semanal(request):
     except Exception as e:
         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
     
+@csrf_exempt
+def obtener_notas_por_alumno(request, uid):
+    try:
+        notas = get_notas_alumno(request, uid)
+        return JsonResponse(notas, status=200, safe=False)
+    except Exception as e:
+        return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
 
 
 
