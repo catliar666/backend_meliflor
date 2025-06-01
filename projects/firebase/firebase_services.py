@@ -205,9 +205,31 @@ def get_notas_alumno(request, uid):
             return {"code": "500", "error": str(e)}
 
 
-# def get_alumnos():
-#     token = obtener_token_acceso()
-#     url = os.getenv('URL_ALUMNOS')
+def get_alumnos(request):
+    token = obtener_token_acceso()
+    url = f'https://firestore.googleapis.com/v1/{os.getenv("URL_ALUMNOS")}'
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        return {"code": "500", "error": response.text}
+
+    try:
+        data = response.json()
+        documentos = data.get("documents", [])
+
+        alumnos = [
+            parse_alumno_document(doc) for doc in documentos
+        ]
+
+        return alumnos
+
+    except Exception as e:
+        return {"code": "500", "error": str(e)}
+
 
     
 

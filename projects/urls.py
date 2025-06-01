@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import perfil_usuario, token, obtener_menu_semanal, obtener_notas_por_alumno
+from .views import perfil_usuario, token, obtener_menu_semanal, obtener_notas_por_alumno, obtener_alumnos
 
 
 urlpatterns = [
@@ -7,6 +7,7 @@ urlpatterns = [
     path('usuarios/<str:uid>/', perfil_usuario, name='perfil_usuario'),
     path('menu/', obtener_menu_semanal, name='menus'),
     path('notas/<str:uid>/', obtener_notas_por_alumno, name='notas_por_alumno'),
+    path('alumnos/', obtener_alumnos, name='alumnos')
 
 ]
 
