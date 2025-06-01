@@ -2,6 +2,7 @@ from .auth import obtener_token_acceso
 from .parsers.usuarios_parse import parse_usuario_document
 from .parsers.alumnos_parse import parse_alumno_document
 from .parsers.administradores_parse import parse_administrador_document
+from .parsers.noticias_parse import parse_noticia_document
 from .parsers.menus_parse import parse_menu_document
 from .helpers import fetch_document_by_reference, transformar_a_firestore_fields
 from datetime import datetime, timedelta
@@ -226,6 +227,32 @@ def get_alumnos(request):
         ]
 
         return alumnos
+
+    except Exception as e:
+        return {"code": "500", "error": str(e)}
+    
+
+def get_noticias(request):
+    token = obtener_token_acceso()
+    url = os.getenv("URL_NOTICIAS")
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        return {"code": "500", "error": response.text}
+
+    try:
+        data = response.json()
+        documentos = data.get("documents", [])
+
+        noticias = [
+            parse_noticia_document(doc) for doc in documentos
+        ]
+
+        return noticias
 
     except Exception as e:
         return {"code": "500", "error": str(e)}
