@@ -15,114 +15,39 @@ def parse_alumno_document(doc):
     def extract_refs(field):
         return [item.get("referenceValue", "") for item in field.get("arrayValue", {}).get("values", [])]
     
-    def resolve_alergias(refs):
-        alergias = []
-        for ref in refs:
-            try:
-                raw_doc = fetch_document_by_reference(ref.lstrip("/"))
-                alergias.append(parse_alergias_document(raw_doc))
-            except Exception as e:
-                print(f"Error cargando alergia {ref}: {e}")
-        return alergias
-
-    alergia_refs = extract_refs(fields.get("alergias", {}))
-
-    def resolve_medicamentos(refs):
-        medicamentos = []
-        for ref in refs:
-            try:
-                raw_doc = fetch_document_by_reference(ref.lstrip("/"))
-                medicamentos.append(parse_medicamento_document(raw_doc))
-            except Exception as e:
-                print(f"Error cargando medicamentos {ref}: {e}")
-        return medicamentos
-
-    medicamentos_refs = extract_refs(fields.get("medicamentos", {}))
-
-    def resolve_necesidades(refs):
-        necesidades = []
-        for ref in refs:
-            try:
-                raw_doc = fetch_document_by_reference(ref.lstrip("/"))  # quitar "/" inicial
-                necesidades.append(parse_necesidad_document(raw_doc))
-            except Exception as e:
-                print(f"Error cargando necesidades {ref}: {e}")
-        return necesidades
-
-    necesidades_refs = extract_refs(fields.get("necesidades", {}))
-
-    def resolve_enfermedades(refs):
-        enfermedades = []
-        for ref in refs:
-            try:
-                raw_doc = fetch_document_by_reference(ref.lstrip("/"))  # quitar "/" inicial
-                enfermedades.append(parse_enfermedad_document(raw_doc))
-            except Exception as e:
-                print(f"Error cargando enfermedades {ref}: {e}")
-        return enfermedades
-
-    enfermedades_refs = extract_refs(fields.get("enfermedades", {}))
-
-    def resolve_conflictos(refs):
-        conflictos = []
-        for ref in refs:
-            try:
-                raw_doc = fetch_document_by_reference(ref.lstrip("/"))  # quitar "/" inicial
-                conflictos.append(parse_conflicto_document(raw_doc))
-            except Exception as e:
-                print(f"Error cargando conflictos {ref}: {e}")
-        return conflictos
-
-    conflictos_refs = extract_refs(fields.get("conflictos", {}))
-
-    def resolve_suenio(refs):
-        suenio = []
-        for ref in refs:
-            try:
-                raw_doc = fetch_document_by_reference(ref.lstrip("/"))  # quitar "/" inicial
-                suenio.append(parse_suenio_document(raw_doc))
-            except Exception as e:
-                print(f"Error cargando suenio {ref}: {e}")
-        return suenio
-
-    suenio_refs = extract_refs(fields.get("rutinaSuenio", {}))
-
-    def resolve_ausencias(refs):
-        ausencias = []
-        for ref in refs:
-            try:
-                raw_doc = fetch_document_by_reference(ref.lstrip("/"))  # quitar "/" inicial
-                ausencias.append(parse_ausencia_document(raw_doc))
-            except Exception as e:
-                print(f"Error cargando ausencias {ref}: {e}")
-        return ausencias
-
-    ausencias_refs = extract_refs(fields.get("ausencias", {}))
+    def extract_id_from_ref(refs):
+        return [ref.rstrip("/").split("/")[-1] for ref in refs]
 
     
-    def resolve_mochilas(refs):
-        mochilas = []
-        for ref in refs:
-            try:
-                raw_doc = fetch_document_by_reference(ref.lstrip("/"))  # quitar "/" inicial
-                mochilas.append(parse_mochila_document(raw_doc))
-            except Exception as e:
-                print(f"Error cargando mochilas {ref}: {e}")
-        return mochilas
+    alergias_ref = extract_refs(fields.get("alergias", {}))
+    alergias_id = extract_id_from_ref(alergias_ref) if alergias_ref else None
 
-    mochilas_refs = extract_refs(fields.get("mochilas", {}))
+    medicamentos_ref = extract_refs(fields.get("medicamentos", {}))
+    medicamentos_id = extract_id_from_ref(medicamentos_ref) if medicamentos_ref else None
 
-    def resolve_consumo(refs):
-        consumo = []
-        for ref in refs:
-            try:
-                raw_doc = fetch_document_by_reference(ref.lstrip("/"))  # quitar "/" inicial
-                consumo.append(parse_consumo_document(raw_doc))
-            except Exception as e:
-                print(f"Error cargando consumo {ref}: {e}")
-        return consumo
+    enfermedades_ref = extract_refs(fields.get("enfermedades", {}))
+    enfermedades_id = extract_id_from_ref(enfermedades_ref) if enfermedades_ref else None
 
-    consumo_refs = extract_refs(fields.get("consumo", {}))
+    medicamentos_ref = extract_refs(fields.get("alergias", {}))
+    medicamentos_id = extract_id_from_ref(alergias_ref) if alergias_ref else None
+
+    necesidades_ref = extract_refs(fields.get("necesidades", {}))
+    necesidades_id = extract_id_from_ref(necesidades_ref) if necesidades_ref else None
+
+    conflictos_ref = extract_refs(fields.get("conflictos", {}))
+    conflictos_id = extract_id_from_ref(conflictos_ref) if conflictos_ref else None
+
+    rutinaSuenio_ref = extract_refs(fields.get("rutinaSuenio", {}))
+    rutinaSuenio_id = extract_id_from_ref(rutinaSuenio_ref) if rutinaSuenio_ref else None
+
+    ausencias_ref = extract_refs(fields.get("ausencias", {}))
+    ausencias_id = extract_id_from_ref(ausencias_ref) if ausencias_ref else None
+
+    mochilas_ref = extract_refs(fields.get("mochilas", {}))
+    mochilas_id = extract_id_from_ref(mochilas_ref) if mochilas_ref else None
+
+    consumo_ref = extract_refs(fields.get("consumo", {}))
+    consumo_id = extract_id_from_ref(consumo_ref) if consumo_ref else None
 
     return {
         "nombre": fields.get("nombre", {}).get("stringValue", ""),
@@ -131,13 +56,13 @@ def parse_alumno_document(doc):
         "edad": fields.get("edad", {}).get("integerValue", ""),
         "idioma": fields.get("idioma", {}).get("stringValue", ""),
         "cumpleanios": fields.get("cumpleanios", {}).get("timestampValue", ""),
-        "alergias": resolve_alergias(alergia_refs),
-        "medicamentos": resolve_medicamentos(medicamentos_refs),
-        "enfermedades": resolve_enfermedades(enfermedades_refs),
-        "necesidades": resolve_necesidades(necesidades_refs),
-        "conflictos": resolve_conflictos(conflictos_refs),
-        "rutinaSuenio": resolve_suenio(suenio_refs),
-        "ausencias": resolve_ausencias(ausencias_refs),
-        "mochilas": resolve_mochilas(mochilas_refs),
-        "consumo": resolve_consumo(consumo_refs),
+        "alergias": alergias_id,
+        "medicamentos": medicamentos_id,
+        "enfermedades": enfermedades_id,
+        "necesidades": necesidades_id,
+        "conflictos": conflictos_id,
+        "rutinaSuenio": rutinaSuenio_id,
+        "ausencias": ausencias_id,
+        "mochilas": mochilas_id,
+        "consumo": consumo_id,
     }

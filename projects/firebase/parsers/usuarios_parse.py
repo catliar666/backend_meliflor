@@ -1,11 +1,20 @@
 def parse_usuario_document(doc):
     fields = doc.get("fields", {})
-    
+
     def extract_array(field, key="stringValue"):
         return [item.get(key, "") for item in field.get("arrayValue", {}).get("values", [])]
 
     def extract_timestamps(field):
         return [item.get("timestampValue", "") for item in field.get("arrayValue", {}).get("values", [])]
+
+    def extract_ids_from_references(field):
+        values = field.get("arrayValue", {}).get("values", [])
+        ids = []
+        for item in values:
+            ref = item.get("referenceValue", "")
+            if ref:
+                ids.append(ref.rstrip("/").split("/")[-1])
+        return ids
 
     return {
         "nombre": fields.get("nombre", {}).get("stringValue", ""),
@@ -26,5 +35,6 @@ def parse_usuario_document(doc):
         "custodia": fields.get("custodia", {}).get("booleanValue", False),
         "seguroMedico": fields.get("seguroMedico", {}).get("booleanValue", False),
         "cuotaPagada": extract_timestamps(fields.get("cuotaPagada", {})),
-        "hijos": extract_array(fields.get("hijos", {}), key="referenceValue"),
+        "hijos": extract_ids_from_references(fields.get("hijos", {}))
     }
+

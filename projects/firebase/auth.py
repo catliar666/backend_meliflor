@@ -4,7 +4,7 @@ import json
 import os
 
 def obtener_token_acceso():
-    SCOPES = ["https://www.googleapis.com/auth/datastore"]
+    SCOPES = ["https://www.googleapis.com/auth/datastore", "https://www.googleapis.com/auth/firebase.messaging"]
 
     # Lee el JSON desde la variable de entorno y lo convierte en dict
     firebase_config_json = os.getenv('FIREBASE_CONFIG')

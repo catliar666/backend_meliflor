@@ -6,4 +6,5 @@ def parse_noticia_document(doc):
         "titulo": fields.get("titulo", {}).get("stringValue", ""),
         "foto": fields.get("foto", {}).get("stringValue", ""),
         "descripcion": fields.get("descripcion", {}).get("stringValue", ""),
+        "fecha": fields.get("fecha", {}).get("timestampValue", "")
     }
