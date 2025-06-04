@@ -1,4 +1,4 @@
-from ..helpers import fetch_document_by_reference
+from ..helpers import convertir_fecha_utc_a_local, fetch_document_by_reference
 from .platos_parse import parse_plato_document
 
 def parse_menu_document(doc):
@@ -16,13 +16,16 @@ def parse_menu_document(doc):
             except Exception as e:
                 print(f"Error cargando platos {ref}: {e}")
         return platos
-    
+
     platos_refs = extract_refs(fields.get("platos", {}))
+    fecha_comienzo_raw = fields.get("fechaComienzo", {}).get("timestampValue", "")
+    fecha_fin_raw = fields.get("fechaFin", {}).get("timestampValue", "")
 
     return {
         "id": doc.get("name", "").split("/")[-1],
-        "fechaComienzo": fields.get("fechaComienzo", {}).get("timestampValue", ""),
-        "fechaFin": fields.get("fechaFin", {}).get("timestampValue", ""),
-        "platos":  resolve_platos(platos_refs),
+        "fechaComienzo": convertir_fecha_utc_a_local(fecha_comienzo_raw),  # Ajustada
+        "fechaFin": convertir_fecha_utc_a_local(fecha_fin_raw),            # Ajustada
+        "platos": resolve_platos(platos_refs),
     }
+
 

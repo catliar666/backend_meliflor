@@ -7,6 +7,13 @@ from .parsers.notificaciones_parse import parse_notificacion_document
 from .parsers.medicamentos_parse import parse_medicamento_document
 from .parsers.alergias_parse import parse_alergias_document
 from .parsers.menus_parse import parse_menu_document
+from.parsers.enfermedades_parse import parse_enfermedad_document
+from .parsers.necesidades_parse import parse_necesidad_document
+from.parsers.conflictos_parse import parse_conflicto_document
+from .parsers.suenio_parse import parse_suenio_document
+from .parsers.mochilas_parse import parse_mochila_document
+from .parsers.ausencias_parse import parse_ausencia_document
+from .parsers.consumo_parse import parse_consumo_document
 from .helpers import transformar_a_firestore_fields, validar_horario_string
 from datetime import datetime, timedelta
 
@@ -110,15 +117,19 @@ def get_administradores_completo(uid):
 
 
 
+from datetime import datetime, timedelta, timezone
+
 def obtener_rango_semana_actual():
-    hoy = datetime.utcnow()
+    utc_plus_2 = timezone(timedelta(hours=2))
+    hoy = datetime.now(utc_plus_2)
     inicio_semana = hoy - timedelta(days=hoy.weekday())
     fin_semana = inicio_semana + timedelta(days=6)
 
     return (
-        inicio_semana.replace(hour=0, minute=0, second=0, microsecond=0).isoformat("T") + "Z",
-        fin_semana.replace(hour=23, minute=59, second=59, microsecond=999000).isoformat("T") + "Z",
+        inicio_semana.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat("T").replace("+00:00", "Z"),
+        fin_semana.replace(hour=23, minute=59, second=59, microsecond=999000).astimezone(timezone.utc).isoformat("T").replace("+00:00", "Z"),
     )
+
 
 
 def obtener_menu_de_la_semana(request):
@@ -335,16 +346,7 @@ def get_alumnos(request):
                     "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"
                 }
 
-            firestore_payload = {
-                "fields": {
-                    "nombre": {"stringValue": data["nombre"]},
-                    "apellidos": {"stringValue": data["apellidos"]},
-                    "genero": {"stringValue": data["genero"]},
-                    "edad": {"integerValue": str(data["edad"])},
-                    "idioma": {"stringValue": data["idioma"]},
-                    "cumpleanios": {"timestampValue": data["cumpleanios"]}
-                }
-            }
+            firestore_payload = transformar_a_firestore_fields(data)
 
             response = requests.post(base_url, headers=headers, json=firestore_payload)
 
@@ -487,14 +489,7 @@ def get_noticias(request):
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
 
-            firestore_payload = {
-                "fields": {
-                    "titulo": {"stringValue": data["titulo"]},
-                    "descripcion": {"stringValue": data["descripcion"]},
-                    "foto": {"stringValue": data["imagen"]},
-                    "fecha": {"timestampValue": datetime.utcnow().isoformat() + "Z"}
-                }
-            }
+            firestore_payload = transformar_a_firestore_fields(data)
 
             response = requests.post(base_url, headers=headers, json=firestore_payload)
 
@@ -592,27 +587,27 @@ def enviar_notificacion(request):
                     return {"code": "500", "error": str(e)}
 
         else:
-                url = os.getenv("URL_NOTIFICACIONES")
-                response = requests.get(url, headers=headers)
+            url = os.getenv("URL_NOTIFICACIONES")
+            response = requests.get(url, headers=headers)
 
-                if response.status_code != 200:
-                    return {"code": "500", "error": response.text}
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
 
-                try:
-                    data = response.json()
-                    documentos = data.get("documents", [])
+            try:
+                data = response.json()
+                documentos = data.get("documents", [])
 
-                    notificaciones = [
-                        parse_notificacion_document(doc) for doc in documentos
-                    ]
+                notificaciones = [
+                    parse_notificacion_document(doc) for doc in documentos
+                ]
 
-                    return {"code": "200", "message": notificaciones}
+                return {"code": "200", "message": notificaciones}
 
-                except Exception as e:
-                    import traceback
-                    print("[ERROR] Excepción al procesar notificaciones sin filtro:")
-                    traceback.print_exc()
-                    return {"code": "500", "error": str(e)}
+            except Exception as e:
+                import traceback
+                print("[ERROR] Excepción al procesar notificaciones sin filtro:")
+                traceback.print_exc()
+                return {"code": "500", "error": str(e)}
 
 
 
@@ -660,16 +655,7 @@ def enviar_notificacion(request):
                 }
 
             # 🗃️ Guardar en Firestore
-            firestore_payload = {
-                "fields": {
-                    "idUser": {"referenceValue": f"{os.getenv('REFERENCIA_USER')}{usuario_id}"},
-                    "titulo": {"stringValue": titulo},
-                    "cuerpo": {"stringValue": cuerpo},
-                    "fecha": {"timestampValue": datetime.utcnow().isoformat() + "Z"},
-                    "leido": {"booleanValue": False},
-                    "ruta": {"stringValue": ruta},
-                }
-            }
+            firestore_payload = transformar_a_firestore_fields(data)
 
             firestore_response = requests.post(
                 os.getenv('URL_NOTIFICACIONES'),
@@ -694,35 +680,38 @@ def enviar_notificacion(request):
 def get_medicamentos(request):
     token = obtener_token_acceso()
     base_url = os.getenv("URL_MEDICAMENTOS")
-    query_url = os.getenv("URL_INDICE")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
 
     if request.method == "GET":
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-
         try:
-            response = requests.get(base_url, headers=headers)
 
-            if response.status_code != 200:
-                return {"code": "500", "error": response.text}
-
-            data = response.json()
-
-            documentos = data.get("documents", [])
-            medicamento = [
-                parse_medicamento_document(doc) for doc in documentos
-            ]
-
-            return {"code": "200", "message": medicamento}
+            if uid:
+                response = requests.get(f"{base_url}{uid}", headers=headers)
+                if response.status_code != 200:
+                    return {"code": "404", "error": f"No se encontró el medicamento con UID {uid}"}
+                data = response.json()
+                medicamento = parse_medicamento_document(data)
+                return {"code": "200", "message": medicamento}
+            else:
+                response = requests.get(base_url, headers=headers)
+                if response.status_code != 200:
+                    return {"code": "500", "error": response.text}
+                data = response.json()
+                documentos = data.get("documents", [])
+                medicamentos = [parse_medicamento_document(doc) for doc in documentos]
+                return {"code": "200", "message": medicamentos}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
+
     elif request.method == "POST":
         try:
             data = json.loads(request.body)
-            
             campos_obligatorios = ["nombre", "dosis", "horarioAdministracion", "frecuencia", "metodoAdministracion"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
 
@@ -730,18 +719,11 @@ def get_medicamentos(request):
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
 
             try:
-                horario_valido = validar_horario_string(data["horarioAdministracion"])
+                data["horarioAdministracion"] = validar_horario_string(data["horarioAdministracion"])
             except ValueError as e:
                 return {"code": "400", "error": str(e)}
 
-            firestore_payload = {
-                "fields": {
-                    "nombre": {"stringValue": data["nombre"]},
-                    "dosis": {"stringValue": data["dosis"]},
-                    "horarioAdministracion": {"stringValue": horario_valido}
-                }
-            }
-
+            firestore_payload = transformar_a_firestore_fields(data)
             response = requests.post(base_url, headers=headers, json=firestore_payload)
 
             if response.status_code not in [200, 201]:
@@ -757,36 +739,826 @@ def get_medicamentos(request):
                 "id": document_id
             }
 
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
+
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar el medicamento"}
+
+            data = json.loads(request.body)
+            if "horarioAdministracion" in data:
+                try:
+                    data["horarioAdministracion"] = validar_horario_string(data["horarioAdministracion"])
+                except ValueError as e:
+                    return {"code": "400", "error": str(e)}
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.patch(url_uid, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            return {"code": "200", "message": f"Medicamento '{uid}' actualizado correctamente"}
 
         except Exception as e:
-            return {"code": "500", "error": str(e)} 
+            return {"code": "500", "error": str(e)}
+    elif request.method == "DELETE":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar un medicamento"}
+
+            response = requests.delete(url_uid, headers=headers)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+            return {"code": "200", "message": f"Medicamento '{uid}' eliminado correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    return {"code": "405", "error": "Método no permitido"}
+
         
 def get_alergias(request):
     token = obtener_token_acceso()
     base_url = os.getenv('URL_ALERGIAS')
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
 
     if request.method == "GET":
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
-
         try:
-            response = requests.get(base_url, headers=headers)
+            if uid:
+                response = requests.get(f"{base_url}{uid}", headers=headers)
+            else:
+                response = requests.get(base_url, headers=headers)
 
             if response.status_code != 200:
                 return {"code": "500", "error": response.text}
 
             data = response.json()
-            documentos = data.get("documents", [])
 
-            alergia = [
-                parse_alergias_document(doc) for doc in documentos
-            ]
-
-            return {"code": "200", "message": alergia}
+            if uid:
+                alergia = parse_alergias_document(data)
+                return {"code": "200", "message": alergia}
+            else:
+                documentos = data.get("documents", [])
+                alergia = [parse_alergias_document(doc) for doc in documentos]
+                return {"code": "200", "message": alergia}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
-        
-    # elif request.method == "POST":
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            campos_obligatorios = ["nombre", "tipo", "gravedad", "fechaDiagnostico", "reaccion", "tratamiento", "sintomas"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.post(base_url, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+            return {"code": "201", "message": "Alergia añadida correctamente", "id": document_id}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar la alergia"}
+
+            data = json.loads(request.body)
+            campos_actualizados = {}
+
+            campos_actualizados = transformar_a_firestore_fields(data)
+
+            if not campos_actualizados:
+                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
+
+
+            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            return {"code": "200", "message": f"Alergia '{uid}' actualizada correctamente"}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+    elif request.method == "DELETE":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar una alergia"}
+
+            response = requests.delete(url_uid, headers=headers)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+            return {"code": "200", "message": f"Alergia '{uid}' eliminado correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    return {"code": "405", "error": "Método no permitido"}
+
+
+def get_enfermedades(request):
+    token = obtener_token_acceso()
+    base_url = os.getenv('URL_ENFERMEDADES')
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    if request.method == "GET":
+        try:
+            if uid:
+                response = requests.get(f"{base_url}{uid}", headers=headers)
+            else:
+                response = requests.get(base_url, headers=headers)
+
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
+
+            data = response.json()
+
+            if uid:
+                enfermedad = parse_enfermedad_document(data)
+                return {"code": "200", "message": enfermedad}
+            else:
+                documentos = data.get("documents", [])
+                alergia = [parse_enfermedad_document(doc) for doc in documentos]
+                return {"code": "200", "message": alergia}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            campos_obligatorios = ["nombre", "contagiosa", "tratamiento", "gravedad", "descripcion"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.post(base_url, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+            return {"code": "201", "message": "Enfermedad añadida correctamente", "id": document_id}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar la enfermedad"}
+
+            data = json.loads(request.body)
+            campos_actualizados = {}
+
+            campos_actualizados = transformar_a_firestore_fields(data)
+
+            if not campos_actualizados:
+                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
+
+            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            return {"code": "200", "message": f"Enfermedad '{uid}' actualizada correctamente"}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+    elif request.method == "DELETE":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar una enfermedad"}
+
+            response = requests.delete(url_uid, headers=headers)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+            return {"code": "200", "message": f"Enfermedad '{uid}' eliminado correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    return {"code": "405", "error": "Método no permitido"}
+
+
+
+def get_necesidades(request):
+    token = obtener_token_acceso()
+    base_url = os.getenv('URL_NECESIDADES')
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    if request.method == "GET":
+        try:
+            if uid:
+                response = requests.get(f"{base_url}{uid}", headers=headers)
+            else:
+                response = requests.get(base_url, headers=headers)
+
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
+
+            data = response.json()
+
+            if uid:
+                necesidad = parse_necesidad_document(data)
+                return {"code": "200", "message": necesidad}
+            else:
+                documentos = data.get("documents", [])
+                necesidad = [parse_necesidad_document(doc) for doc in documentos]
+                return {"code": "200", "message": necesidad}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            campos_obligatorios = ["tipo", "fecha", "ayuda"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.post(base_url, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+            return {"code": "201", "message": "Necesidad añadida correctamente", "id": document_id}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar la necesidad"}
+
+            data = json.loads(request.body)
+            campos_actualizados = {}
+
+            campos_actualizados = transformar_a_firestore_fields(data)
+
+            if not campos_actualizados:
+                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
+
+            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            return {"code": "200", "message": f"Necesidad '{uid}' actualizada correctamente"}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+    elif request.method == "DELETE":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar una necesidad"}
+
+            response = requests.delete(url_uid, headers=headers)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+            return {"code": "200", "message": f"Necesidad '{uid}' eliminado correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    return {"code": "405", "error": "Método no permitido"}
+
+
+def get_conflictos(request):
+    token = obtener_token_acceso()
+    base_url = os.getenv('URL_CONFLICTOS')
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    if request.method == "GET":
+        try:
+            if uid:
+                response = requests.get(f"{base_url}{uid}", headers=headers)
+            else:
+                response = requests.get(base_url, headers=headers)
+
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
+
+            data = response.json()
+
+            if uid:
+                conflicto = parse_conflicto_document(data)
+                return {"code": "200", "message": conflicto}
+            else:
+                documentos = data.get("documents", [])
+                conflicto = [parse_conflicto_document(doc) for doc in documentos]
+                return {"code": "200", "message": conflicto}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            campos_obligatorios = ["accion", "descripcion", "informado", "observaciones", "fecha", "resolucion", "motivo", "gravedad"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.post(base_url, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+
+            return {"code": "201", "message": "Conflicto añadido correctamente", "id": document_id}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar el conflicto"}
+
+            data = json.loads(request.body)
+            campos_actualizados = {}
+
+            campos_actualizados = transformar_a_firestore_fields(data)
+
+            if not campos_actualizados:
+                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
+
+            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            return {"code": "200", "message": f"Conflicto '{uid}' actualizado correctamente"}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+    elif request.method == "DELETE":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar un conflicto"}
+
+            response = requests.delete(url_uid, headers=headers)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+            return {"code": "200", "message": f"Conflicto '{uid}' eliminado correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    return {"code": "405", "error": "Método no permitido"}
+
+def get_rutina(request):
+    token = obtener_token_acceso()
+    base_url = os.getenv('URL_RUTINA')
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    if request.method == "GET":
+        try:
+            if uid:
+                response = requests.get(f"{base_url}{uid}", headers=headers)
+            else:
+                response = requests.get(base_url, headers=headers)
+
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
+
+            data = response.json()
+
+            if uid:
+                rutina = parse_suenio_document(data)
+                return {"code": "200", "message": rutina}
+            else:
+                documentos = data.get("documents", [])
+                rutina = [parse_suenio_document(doc) for doc in documentos]
+                return {"code": "200", "message": rutina}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            campos_obligatorios = ["comentarios", "fecha", "duracion"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.post(base_url, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+
+            return {"code": "201", "message": "Rutina añadida correctamente", "id": document_id}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar la rutina"}
+
+            data = json.loads(request.body)
+            campos_actualizados = {}
+
+            campos_actualizados = transformar_a_firestore_fields(data)
+
+            if not campos_actualizados:
+                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
+
+            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            return {"code": "200", "message": f"Rutina '{uid}' actualizado correctamente"}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+    elif request.method == "DELETE":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar una rutina"}
+
+            response = requests.delete(url_uid, headers=headers)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+            return {"code": "200", "message": f"Rutina '{uid}' eliminada correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    return {"code": "405", "error": "Método no permitido"}
+
+def get_mochilas(request):
+    token = obtener_token_acceso()
+    base_url = os.getenv('URL_MOCHILAS')
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    if request.method == "GET":
+        try:
+            if uid:
+                response = requests.get(f"{base_url}{uid}", headers=headers)
+            else:
+                response = requests.get(base_url, headers=headers)
+
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
+
+            data = response.json()
+
+            if uid:
+                mochila = parse_mochila_document(data)
+                return {"code": "200", "message": mochila}
+            else:
+                documentos = data.get("documents", [])
+                mochila = [parse_mochila_document(doc) for doc in documentos]
+                return {"code": "200", "message": mochila}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            campos_obligatorios = ["fecha", "objetos"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.post(base_url, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+
+            return {"code": "201", "message": "Mochila añadida correctamente", "id": document_id}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar la mochila"}
+
+            data = json.loads(request.body)
+            campos_actualizados = {}
+
+            campos_actualizados = transformar_a_firestore_fields(data)
+
+            if not campos_actualizados:
+                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
+
+            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            return {"code": "200", "message": f"Mochila '{uid}' actualizado correctamente"}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+    elif request.method == "DELETE":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar una rutina"}
+
+            response = requests.delete(url_uid, headers=headers)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+            return {"code": "200", "message": f"Mochila '{uid}' eliminada correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    return {"code": "405", "error": "Método no permitido"}
+
+
+def get_consumo(request):
+    token = obtener_token_acceso()
+    base_url = os.getenv('URL_CONSUMO')
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    if request.method == "GET":
+        try:
+            if uid:
+                response = requests.get(url_uid, headers=headers)
+            else:
+                response = requests.get(base_url, headers=headers)
+
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
+
+            data = response.json()
+
+            if uid:
+                consumo = parse_consumo_document(data)
+                return {"code": "200", "message": consumo}
+            else:
+                documentos = data.get("documents", [])
+                consumo = [parse_consumo_document(doc) for doc in documentos]
+                return {"code": "200", "message": consumo}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            campos_obligatorios = ["idPlato", "cantidad", "fecha", "comentarios"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.post(base_url, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+
+            return {"code": "201", "message": "Consumo añadido correctamente", "id": document_id}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar el consumo"}
+
+            data = json.loads(request.body)
+            campos_actualizados = {}
+
+            campos_actualizados = transformar_a_firestore_fields(data)
+
+            if not campos_actualizados:
+                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
+
+            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            return {"code": "200", "message": f"Consumo '{uid}' actualizado correctamente"}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+    elif request.method == "DELETE":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar un consumo"}
+
+            response = requests.delete(url_uid, headers=headers)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+            return {"code": "200", "message": f"Consumo '{uid}' eliminado correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    return {"code": "405", "error": "Método no permitido"}
+
+
+def get_ausencias(request):
+    token = obtener_token_acceso()
+    base_url = os.getenv('URL_AUSENCIAS')
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    if request.method == "GET":
+        try:
+            if uid:
+                response = requests.get(url_uid, headers=headers)
+            else:
+                response = requests.get(base_url, headers=headers)
+
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
+
+            data = response.json()
+
+            if uid:
+                ausencia = parse_ausencia_document(data)
+                return {"code": "200", "message": ausencia}
+            else:
+                documentos = data.get("documents", [])
+                ausencia = [parse_ausencia_document(doc) for doc in documentos]
+                return {"code": "200", "message": ausencia}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            campos_obligatorios = ["notificado", "estado", "fechaNotificacion", "fecha", "comentarios", "motivo"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.post(base_url, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+
+            return {"code": "201", "message": "Consumo añadido correctamente", "id": document_id}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar el consumo"}
+
+            data = json.loads(request.body)
+            campos_actualizados = {}
+
+            campos_actualizados = transformar_a_firestore_fields(data)
+
+            if not campos_actualizados:
+                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
+
+            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            return {"code": "200", "message": f"Consumo '{uid}' actualizado correctamente"}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+    elif request.method == "DELETE":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar un consumo"}
+
+            response = requests.delete(url_uid, headers=headers)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+            return {"code": "200", "message": f"Consumo '{uid}' eliminado correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    return {"code": "405", "error": "Método no permitido"}
+

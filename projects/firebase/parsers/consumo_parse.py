@@ -20,6 +20,7 @@ def parse_consumo_document(doc):
             plato_data = {}
 
     return {
+        "id": doc["name"].split("/")[-1],
         "comentarios": fields.get("comentarios", {}).get("stringValue", ""),
         "cantidad": fields.get("cantidad", {}).get("stringValue", ""),
         "fecha": fields.get("fecha", {}).get("timestampValue", ""),

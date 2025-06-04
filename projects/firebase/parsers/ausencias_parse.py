@@ -2,6 +2,7 @@ def parse_ausencia_document(doc):
     fields = doc.get("fields", {})
 
     return {
+        "id": doc["name"].split("/")[-1],
         "estado": fields.get("estado", {}).get("stringValue", ""),
         "fechaNotificacion": fields.get("fechaNotificacion", {}).get("timestampValue", ""),
         "fecha": fields.get("fecha", {}).get("timestampValue", ""),

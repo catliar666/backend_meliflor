@@ -2,6 +2,7 @@ def parse_conflicto_document(doc):
     fields = doc.get("fields", {})
 
     return {
+        "id": doc["name"].split("/")[-1],
         "motivo": fields.get("motivo", {}).get("stringValue", ""),
         "gravedad": fields.get("gravedad", {}).get("stringValue", ""),
         "observaciones": fields.get("observaciones", {}).get("stringValue", ""),

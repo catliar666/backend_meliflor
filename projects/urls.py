@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import usuario, token, menu_semanal, notas_por_alumno, alumnos, noticias, notifications, medicamentos, alergias
+from .views import usuario, token, menu_semanal, notas_por_alumno, alumnos, noticias, notifications, medicamentos, alergias, enfermedades, necesidades, conflictos, rutinaSuenio, ausencias, mochilas, consumo
 
 
 urlpatterns = [
@@ -11,7 +11,13 @@ urlpatterns = [
     path('noticias/', noticias, name='noticias'),
     path('notification/', notifications, name='enviar_notificacion'),
     path('medicamentos/', medicamentos, name='medicamentos'),
-    path('alergias/', alergias, name='alergias')
+    path('alergias/', alergias, name='alergias'),
+    path('enfermedades/', enfermedades, name='enfermedades'),
+    path('necesidades/', necesidades, name='necesidades'),
+    path('conflictos/', conflictos, name='conflictos'),
+    path('ausencias/', ausencias, name='ausencias'),
+    path('mochilas/', mochilas, name='mochilas'),
+    path('consumo/', consumo, name='consumo')
 ]
 
 # urlpatterns += router.urls

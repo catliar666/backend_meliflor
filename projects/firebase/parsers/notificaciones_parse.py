@@ -13,6 +13,7 @@ def parse_notificacion_document(doc):
     user_id = extract_id_from_ref(user_ref) if user_ref else None
 
     return {
+        "id": doc["name"].split("/")[-1],
         "cuerpo": fields.get("cuerpo", {}).get("stringValue", ""),
         "idUser": user_id,
         "titulo": fields.get("titulo", {}).get("stringValue", ""),

@@ -9,6 +9,18 @@ def validar_horario_string(horario):
         raise ValueError("El horarioAdministracion debe estar en formato HH:MM (ej. 08:30)")
     return horario.strip()
 
+from datetime import datetime, timezone, timedelta
+
+# Conversión de timestamp ISO Firestore a UTC+2 en formato string legible
+def convertir_fecha_utc_a_local(timestamp_str, offset_horas=2):
+    if not timestamp_str:
+        return ""
+    dt_utc = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+    zona_local = timezone(timedelta(hours=offset_horas))
+    dt_local = dt_utc.astimezone(zona_local)
+    return dt_local.strftime("%Y-%m-%d %H:%M:%S")  # o usa el formato que prefieras
+
+
 def fetch_document_by_reference(ref_url):
     token = obtener_token_acceso()
     url = f"https://firestore.googleapis.com/v1/{ref_url}"

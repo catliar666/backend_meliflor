@@ -1,6 +1,7 @@
 def parse_alergias_document(doc):
     fields = doc.get("fields", {})
     return {
+        "id": doc["name"].split("/")[-1],
         "nombre": fields.get("nombre", {}).get("stringValue", ""),
         "tipo": fields.get("tipo", {}).get("stringValue", ""),
         "sintomas": [s.get("stringValue", "") for s in fields.get("sintomas", {}).get("arrayValue", {}).get("values", [])],

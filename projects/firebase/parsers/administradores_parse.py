@@ -2,6 +2,7 @@ def parse_administrador_document(doc):
     fields = doc.get("fields", {})
     
     return {
+        "id": doc["name"].split("/")[-1],
         "nombre": fields.get("nombre", {}).get("stringValue", ""),
         "apellidos": fields.get("apellidos", {}).get("stringValue", ""),
         "telefono": fields.get("telefono", {}).get("stringValue", ""),

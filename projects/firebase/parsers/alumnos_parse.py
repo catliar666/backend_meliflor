@@ -50,6 +50,7 @@ def parse_alumno_document(doc):
     consumo_id = extract_id_from_ref(consumo_ref) if consumo_ref else None
 
     return {
+        "id": doc["name"].split("/")[-1],
         "nombre": fields.get("nombre", {}).get("stringValue", ""),
         "apellidos": fields.get("apellidos", {}).get("stringValue", ""),
         "genero": fields.get("genero", {}).get("stringValue", ""),

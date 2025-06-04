@@ -2,7 +2,7 @@
 
 from django.http import JsonResponse
 from projects.firebase.auth import obtener_token_acceso
-from .firebase.firebase_services import get_usuario_completo, get_administradores_completo, obtener_menu_de_la_semana, get_notas_alumno, get_alumnos, get_noticias, enviar_notificacion, get_medicamentos, get_alergias
+from .firebase.firebase_services import get_usuario_completo, get_administradores_completo, obtener_menu_de_la_semana, get_enfermedades, get_notas_alumno, get_alumnos, get_noticias, enviar_notificacion, get_medicamentos, get_alergias, get_necesidades, get_conflictos, get_rutina, get_mochilas, get_consumo, get_ausencias
 from .firebase.parsers.usuarios_parse import parse_usuario_document
 from .firebase.parsers.alumnos_parse import parse_alumno_document
 from django.views.decorators.csrf import csrf_exempt
@@ -89,7 +89,7 @@ def alergias(request):
 @csrf_exempt
 def enfermedades(request):
     try:
-        enfermedades = enviar_notificacion(request)
+        enfermedades = get_enfermedades(request)
         return JsonResponse(enfermedades, status=enfermedades['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
@@ -97,7 +97,7 @@ def enfermedades(request):
 @csrf_exempt
 def necesidades(request):
     try:
-        necesidades = enviar_notificacion(request)
+        necesidades = get_necesidades(request)
         return JsonResponse(necesidades, status=necesidades['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
@@ -105,7 +105,7 @@ def necesidades(request):
 @csrf_exempt
 def conflictos(request):
     try:
-        conflictos = enviar_notificacion(request)
+        conflictos =  get_conflictos(request)
         return JsonResponse(conflictos, status=conflictos['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
@@ -113,7 +113,7 @@ def conflictos(request):
 @csrf_exempt
 def rutinaSuenio(request):
     try:
-        rutinaSuenio = enviar_notificacion(request)
+        rutinaSuenio =  get_rutina(request)
         return JsonResponse(rutinaSuenio, status=rutinaSuenio['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
@@ -121,7 +121,7 @@ def rutinaSuenio(request):
 @csrf_exempt
 def ausencias(request):
     try:
-        ausencias = enviar_notificacion(request)
+        ausencias =  get_ausencias(request)
         return JsonResponse(ausencias, status=ausencias['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
@@ -129,7 +129,7 @@ def ausencias(request):
 @csrf_exempt
 def mochilas(request):
     try:
-        mochilas = enviar_notificacion(request)
+        mochilas =  get_mochilas(request)
         return JsonResponse(mochilas, status=ausencias['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
@@ -137,10 +137,11 @@ def mochilas(request):
 @csrf_exempt
 def consumo(request):
     try:
-        consumo = enviar_notificacion(request)
+        consumo =  get_consumo(request)
         return JsonResponse(consumo, status=consumo['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
 
 
 

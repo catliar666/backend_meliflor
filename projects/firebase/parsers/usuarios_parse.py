@@ -17,6 +17,7 @@ def parse_usuario_document(doc):
         return ids
 
     return {
+        "id": doc["name"].split("/")[-1],
         "nombre": fields.get("nombre", {}).get("stringValue", ""),
         "apellidos": fields.get("apellidos", {}).get("stringValue", ""),
         "dni": fields.get("dni", {}).get("stringValue", ""),
