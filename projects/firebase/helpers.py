@@ -1,6 +1,14 @@
 from .auth import obtener_token_acceso
 import requests
 
+import re
+
+def validar_horario_string(horario):
+    pattern = re.compile(r'^(?:[01]\d|2[0-3]):[0-5]\d$')
+    if not pattern.match(horario.strip()):
+        raise ValueError("El horarioAdministracion debe estar en formato HH:MM (ej. 08:30)")
+    return horario.strip()
+
 def fetch_document_by_reference(ref_url):
     token = obtener_token_acceso()
     url = f"https://firestore.googleapis.com/v1/{ref_url}"

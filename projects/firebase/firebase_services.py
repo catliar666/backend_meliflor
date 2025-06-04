@@ -4,8 +4,9 @@ from .parsers.alumnos_parse import parse_alumno_document
 from .parsers.administradores_parse import parse_administrador_document
 from .parsers.noticias_parse import parse_noticia_document
 from .parsers.notificaciones_parse import parse_notificacion_document
+from .parsers.medicamentos_parse import parse_medicamento_document
 from .parsers.menus_parse import parse_menu_document
-from .helpers import transformar_a_firestore_fields
+from .helpers import transformar_a_firestore_fields, validar_horario_string
 from datetime import datetime, timedelta
 
 import requests
@@ -352,7 +353,11 @@ def get_alumnos(request):
                     "error": f"Firestore error: {response.text}"
                 }
 
-            return {"code": "201", "message": "Alumno añadido correctamente"}
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+            return {"code": "201", "message": "Alumno añadido correctamente", "id": document_id}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
@@ -683,6 +688,74 @@ def enviar_notificacion(request):
             return {"code": "500", "error": str(e)}
 
     return {"code": "405", "error": "Método no permitido"}
+
+
+def get_medicamentos(request, uid):
+    token = obtener_token_acceso()
+    base_url = f'{os.getenv("URL_MEDICAMENTOS")}{uid}'
+    query_url = os.getenv("URL_INDICE")
+
+    if request.method == "GET":
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            response = requests.get(base_url, headers=headers)
+
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
+
+            data = response.json()
+            medicamento = parse_medicamento_document(data)
+
+            return {"code": "200", "message": medicamento}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            
+            campos_obligatorios = ["nombre", "dosis", "horarioAdministracion", "frecuencia", "metodoAdministracion"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+
+            try:
+                horario_valido = validar_horario_string(data["horarioAdministracion"])
+            except ValueError as e:
+                return {"code": "400", "error": str(e)}
+
+            firestore_payload = {
+                "fields": {
+                    "nombre": {"stringValue": data["nombre"]},
+                    "dosis": {"stringValue": data["dosis"]},
+                    "horarioAdministracion": {"stringValue": horario_valido}
+                }
+            }
+
+            response = requests.post(base_url, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+            return {
+                "code": "201",
+                "message": "Medicamento añadido correctamente",
+                "id": document_id
+            }
+
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)} 
+
 
 
 

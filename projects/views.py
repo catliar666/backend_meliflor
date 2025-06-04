@@ -2,7 +2,7 @@
 
 from django.http import JsonResponse
 from projects.firebase.auth import obtener_token_acceso
-from .firebase.firebase_services import get_usuario_completo, get_administradores_completo, obtener_menu_de_la_semana, get_notas_alumno, get_alumnos, get_noticias, enviar_notificacion
+from .firebase.firebase_services import get_usuario_completo, get_administradores_completo, obtener_menu_de_la_semana, get_notas_alumno, get_alumnos, get_noticias, enviar_notificacion, get_medicamentos
 from .firebase.parsers.usuarios_parse import parse_usuario_document
 from .firebase.parsers.alumnos_parse import parse_alumno_document
 from django.views.decorators.csrf import csrf_exempt
@@ -67,6 +67,78 @@ def notifications(request):
     try:
         notification = enviar_notificacion(request)
         return JsonResponse(notification, status=notification['code'], safe=False)
+    except Exception as e:
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def medicamentos(request, uid):
+    try:
+        medicamentos = get_medicamentos(request, uid)
+        return JsonResponse(medicamentos, status=medicamentos['code'], safe=False)
+    except Exception as e:
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def alergias(request):
+    try:
+        alergias = enviar_notificacion(request)
+        return JsonResponse(alergias, status=alergias['code'], safe=False)
+    except Exception as e:
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def enfermedades(request):
+    try:
+        enfermedades = enviar_notificacion(request)
+        return JsonResponse(enfermedades, status=enfermedades['code'], safe=False)
+    except Exception as e:
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def necesidades(request):
+    try:
+        necesidades = enviar_notificacion(request)
+        return JsonResponse(necesidades, status=necesidades['code'], safe=False)
+    except Exception as e:
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def conflictos(request):
+    try:
+        conflictos = enviar_notificacion(request)
+        return JsonResponse(conflictos, status=conflictos['code'], safe=False)
+    except Exception as e:
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def rutinaSuenio(request):
+    try:
+        rutinaSuenio = enviar_notificacion(request)
+        return JsonResponse(rutinaSuenio, status=rutinaSuenio['code'], safe=False)
+    except Exception as e:
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def ausencias(request):
+    try:
+        ausencias = enviar_notificacion(request)
+        return JsonResponse(ausencias, status=ausencias['code'], safe=False)
+    except Exception as e:
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def mochilas(request):
+    try:
+        mochilas = enviar_notificacion(request)
+        return JsonResponse(mochilas, status=ausencias['code'], safe=False)
+    except Exception as e:
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def consumo(request):
+    try:
+        consumo = enviar_notificacion(request)
+        return JsonResponse(consumo, status=consumo['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
 

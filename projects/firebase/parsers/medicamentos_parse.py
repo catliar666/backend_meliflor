@@ -6,5 +6,5 @@ def parse_medicamento_document(doc):
         "dosis": fields.get("dosis", {}).get("stringValue", ""),
         "frecuencia": fields.get("frecuencia", {}).get("stringValue", ""),
         "metodoAdministracion": fields.get("metodoAdministracion", {}).get("stringValue", ""),
-        "horarioAdministracion": fields.get("horarioAdministracion", {}).get("timestampValue", ""),
+        "horarioAdministracion": fields.get("horarioAdministracion", {}).get("stringValue", ""),
     }
