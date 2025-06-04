@@ -2,7 +2,7 @@
 
 from django.http import JsonResponse
 from projects.firebase.auth import obtener_token_acceso
-from .firebase.firebase_services import get_usuario_completo, get_administradores_completo, obtener_menu_de_la_semana, get_notas_alumno, get_alumnos, get_noticias, enviar_notificacion, get_medicamentos
+from .firebase.firebase_services import get_usuario_completo, get_administradores_completo, obtener_menu_de_la_semana, get_notas_alumno, get_alumnos, get_noticias, enviar_notificacion, get_medicamentos, get_alergias
 from .firebase.parsers.usuarios_parse import parse_usuario_document
 from .firebase.parsers.alumnos_parse import parse_alumno_document
 from django.views.decorators.csrf import csrf_exempt
@@ -71,9 +71,9 @@ def notifications(request):
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
     
 @csrf_exempt
-def medicamentos(request, uid):
+def medicamentos(request):
     try:
-        medicamentos = get_medicamentos(request, uid)
+        medicamentos = get_medicamentos(request)
         return JsonResponse(medicamentos, status=medicamentos['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
@@ -81,7 +81,7 @@ def medicamentos(request, uid):
 @csrf_exempt
 def alergias(request):
     try:
-        alergias = enviar_notificacion(request)
+        alergias = get_alergias(request)
         return JsonResponse(alergias, status=alergias['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)

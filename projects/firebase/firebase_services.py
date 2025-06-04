@@ -5,6 +5,7 @@ from .parsers.administradores_parse import parse_administrador_document
 from .parsers.noticias_parse import parse_noticia_document
 from .parsers.notificaciones_parse import parse_notificacion_document
 from .parsers.medicamentos_parse import parse_medicamento_document
+from .parsers.alergias_parse import parse_alergias_document
 from .parsers.menus_parse import parse_menu_document
 from .helpers import transformar_a_firestore_fields, validar_horario_string
 from datetime import datetime, timedelta
@@ -690,9 +691,9 @@ def enviar_notificacion(request):
     return {"code": "405", "error": "Método no permitido"}
 
 
-def get_medicamentos(request, uid):
+def get_medicamentos(request):
     token = obtener_token_acceso()
-    base_url = f'{os.getenv("URL_MEDICAMENTOS")}{uid}'
+    base_url = os.getenv("URL_MEDICAMENTOS")
     query_url = os.getenv("URL_INDICE")
 
     if request.method == "GET":
@@ -708,7 +709,11 @@ def get_medicamentos(request, uid):
                 return {"code": "500", "error": response.text}
 
             data = response.json()
-            medicamento = parse_medicamento_document(data)
+
+            documentos = data.get("documents", [])
+            medicamento = [
+                parse_medicamento_document(doc) for doc in documentos
+            ]
 
             return {"code": "200", "message": medicamento}
 
@@ -755,12 +760,33 @@ def get_medicamentos(request, uid):
 
         except Exception as e:
             return {"code": "500", "error": str(e)} 
+        
+def get_alergias(request):
+    token = obtener_token_acceso()
+    base_url = os.getenv('URL_ALERGIAS')
 
+    if request.method == "GET":
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
 
+        try:
+            response = requests.get(base_url, headers=headers)
 
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
 
-    
+            data = response.json()
+            documentos = data.get("documents", [])
 
+            alergia = [
+                parse_alergias_document(doc) for doc in documentos
+            ]
 
+            return {"code": "200", "message": alergia}
 
-
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+        
+    # elif request.method == "POST":
