@@ -1,3 +1,6 @@
+from projects.firebase.helpers import convertir_fecha_utc_a_local
+
+
 def parse_usuario_document(doc):
     fields = doc.get("fields", {})
 
@@ -16,6 +19,7 @@ def parse_usuario_document(doc):
                 ids.append(ref.rstrip("/").split("/")[-1])
         return ids
 
+    fecha_raw = fields.get("fechaInscripcion", {}).get("timestampValue", "")
     return {
         "id": doc["name"].split("/")[-1],
         "nombre": fields.get("nombre", {}).get("stringValue", ""),
@@ -28,7 +32,7 @@ def parse_usuario_document(doc):
         "ocupacion": fields.get("ocupacion", {}).get("stringValue", ""),
         "nacionalidad": fields.get("nacionalidad", {}).get("stringValue", ""),
         "estadoCivil": fields.get("estadoCivil", {}).get("stringValue", ""),
-        "fechaInscripcion": fields.get("fechaInscripcion", {}).get("timestampValue", ""),
+        "fechaInscripcion": convertir_fecha_utc_a_local(fecha_raw),
         "role": fields.get("role", {}).get("stringValue", ""),
         "suscripcion": fields.get("suscripcion", {}).get("stringValue", ""),
         "autorizacionFotos": fields.get("autorizacionFotos", {}).get("booleanValue", False),

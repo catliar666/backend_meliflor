@@ -1,4 +1,4 @@
-from ..helpers import fetch_document_by_reference
+from ..helpers import convertir_fecha_utc_a_local, fetch_document_by_reference
 from .alergias_parse import parse_alergias_document
 from .medicamentos_parse import parse_medicamento_document
 from .enfermedades_parse import parse_enfermedad_document
@@ -49,6 +49,8 @@ def parse_alumno_document(doc):
     consumo_ref = extract_refs(fields.get("consumo", {}))
     consumo_id = extract_id_from_ref(consumo_ref) if consumo_ref else None
 
+    cumpleanios_raw = fields.get("cumpleanios", {}).get("timestampValue", "")
+
     return {
         "id": doc["name"].split("/")[-1],
         "nombre": fields.get("nombre", {}).get("stringValue", ""),
@@ -56,7 +58,7 @@ def parse_alumno_document(doc):
         "genero": fields.get("genero", {}).get("stringValue", ""),
         "edad": fields.get("edad", {}).get("integerValue", ""),
         "idioma": fields.get("idioma", {}).get("stringValue", ""),
-        "cumpleanios": fields.get("cumpleanios", {}).get("timestampValue", ""),
+        "cumpleanios": convertir_fecha_utc_a_local(cumpleanios_raw),
         "alergias": alergias_id,
         "medicamentos": medicamentos_id,
         "enfermedades": enfermedades_id,

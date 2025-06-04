@@ -1,4 +1,4 @@
-from ..helpers import fetch_document_by_reference
+from ..helpers import convertir_fecha_utc_a_local, fetch_document_by_reference
 
 def parse_consumo_document(doc):
     fields = doc.get("fields", {})
@@ -18,11 +18,11 @@ def parse_consumo_document(doc):
         except Exception as e:
             print(f"Error al obtener el plato: {e}")
             plato_data = {}
-
+    fecha_raw = fields.get("fecha", {}).get("timestampValue", "")
     return {
         "id": doc["name"].split("/")[-1],
         "comentarios": fields.get("comentarios", {}).get("stringValue", ""),
         "cantidad": fields.get("cantidad", {}).get("stringValue", ""),
-        "fecha": fields.get("fecha", {}).get("timestampValue", ""),
+        "fecha": convertir_fecha_utc_a_local(fecha_raw),
         "plato": plato_data
     }
