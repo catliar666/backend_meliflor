@@ -205,6 +205,10 @@ def obtener_menu_de_la_semana(request):
 def get_notas_alumno(request, uid):
     token = obtener_token_acceso()
     urlAlumno = f"{os.getenv('URL_ALUMNOS')}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
 
     if request.method == "GET":
         try:
@@ -223,10 +227,7 @@ def get_notas_alumno(request, uid):
             }
         }
 
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json"
-            }
+
             urlIndice = os.getenv('URL_INDICE')
             response = requests.post(urlIndice, headers=headers, json=query)
 
@@ -246,6 +247,7 @@ def get_notas_alumno(request, uid):
     elif request.method == "POST":
         try:
             data = json.loads(request.body)
+
             campos_obligatorios = ["descripcion", "titulo", "tipoUser", "fecha", "alumno", "tipoNota"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
 
@@ -254,18 +256,19 @@ def get_notas_alumno(request, uid):
                     "code": "400",
                     "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"
                 }
-            
-            tipo_user_valido = data.get("tipoUser") in ["maestro", "usuario"]
-            if not tipo_user_valido:
+
+            if data.get("tipoUser") not in ["maestro", "usuario"]:
                 return {"code": "400", "error": "tipoUser debe ser 'maestro' o 'usuario'"}
 
-            tipo_nota_valido = data.get("tipoNota") in ["informacion", "recordatorio", "incidencia"]
-            if not tipo_nota_valido:
-                {"code": "400", "error": "tipoNota debe ser 'informacion', 'recordatorio' o 'incidencia'"}
+            if data.get("tipoNota") not in ["informacion", "recordatorio", "incidencia"]:
+                return {"code": "400", "error": "tipoNota debe ser 'informacion', 'recordatorio' o 'incidencia'"}
+
 
             firestore_payload = transformar_a_firestore_fields(data)
+            url_notas = os.getenv('URL_NOTAS')
 
-            response = requests.post(os.getenv('URL_NOTAS'), headers=headers, json=firestore_payload)
+
+            response = requests.post(url_notas, headers=headers, json=firestore_payload)
 
             if response.status_code not in [200, 201]:
                 return {
@@ -277,10 +280,11 @@ def get_notas_alumno(request, uid):
             document_path = doc.get("name", "")
             document_id = document_path.split("/")[-1]
 
-            return {"code": "201", "message": "Nota añadido correctamente", "id": document_id}
+            return {"code": "201", "message": "Nota añadida correctamente", "id": document_id}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
+
 
 
 
