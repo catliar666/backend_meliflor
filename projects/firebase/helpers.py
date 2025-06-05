@@ -1,5 +1,6 @@
 from .auth import obtener_token_acceso
 import requests
+import os
 
 import re
 
@@ -36,55 +37,54 @@ def fetch_document_by_reference(ref_url):
     else:
         raise Exception(f"Error al obtener {ref_url}: {response.status_code} - {response.text}")
     
+
+
 def transformar_a_firestore_fields(data: dict) -> dict:
-
-    from datetime import datetime
-
     firestore_fields = {}
 
-    for key, value in data.items():
-        if isinstance(value, datetime) or (isinstance(value, str) and "T" in value):
-            firestore_fields[key] = {
-                "timestampValue": value if isinstance(value, str) else value.isoformat() + "Z"
-            }
+    campos_timestamp = {"fecha", "fechaRecordatorio", "fechaDiagnostico", "fechaNotificacion", "fechaFin", "fechaComienzo", "fechaInscripcion", "cumpleanios"}
+    campos_referencia = {"alumno", "ausencias", "conflictos", "consumo", "enfermedades", "alergias", "medicamentos", "necesidades", "rutinaSuenio" }  # Aquí defines tus campos de tipo referencia
 
-        # Integer
+    project_id = os.getenv("PROJECT_ID")
+
+    for key, value in data.items():
+        # Timestamps
+        if key in campos_timestamp:
+            if isinstance(value, str):
+                dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            else:
+                dt = value
+            utc_dt = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+            firestore_fields[key] = {"timestampValue": utc_dt}
+
+        # Referencias
+        elif key in campos_referencia:
+            path = value.lstrip("/")  # elimina el '/' inicial si viene como "/alumnos/..."
+            reference = f"projects/{project_id}/databases/(default)/documents/{path}"
+            firestore_fields[key] = {"referenceValue": reference}
+
+        # Strings normales
+        elif isinstance(value, str):
+            firestore_fields[key] = {"stringValue": value}
+
+        # Enteros
         elif isinstance(value, int):
             firestore_fields[key] = {"integerValue": str(value)}
 
-        # Float
-        elif isinstance(value, float):
-            firestore_fields[key] = {"doubleValue": value}
-
-        # Boolean
+        # Booleanos
         elif isinstance(value, bool):
             firestore_fields[key] = {"booleanValue": value}
 
-
-        elif isinstance(value, str) and value.startswith("projects/"):
-            firestore_fields[key] = {"referenceValue": value}
-
-        # Lista de referencias
-        elif isinstance(value, list) and all(isinstance(v, str) and v.startswith("projects/") for v in value):
-            firestore_fields[key] = {
-                "arrayValue": {
-                    "values": [{"referenceValue": v} for v in value]
-                }
-            }
-
-        # Lista de strings
+        # Listas de strings
         elif isinstance(value, list) and all(isinstance(v, str) for v in value):
             firestore_fields[key] = {
-                "arrayValue": {
-                    "values": [{"stringValue": v} for v in value]
-                }
+                "arrayValue": {"values": [{"stringValue": v} for v in value]}
             }
-
-        # String normal
-        elif isinstance(value, str):
-            firestore_fields[key] = {"stringValue": value}
 
         else:
             raise ValueError(f"No se puede procesar el campo '{key}' con valor '{value}'")
 
     return {"fields": firestore_fields}
+
+
+
