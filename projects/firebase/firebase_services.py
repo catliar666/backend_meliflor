@@ -80,6 +80,17 @@ def get_usuario_completo(request):
                     "code": "400",
                     "error": f"Faltan campos obligatorios: {', '.join(campos_faltantes)}"
                 }
+            
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
 
             datos_transformados = transformar_a_firestore_fields(data)
 
@@ -252,12 +263,22 @@ def get_notas_alumno(request):
             data = json.loads(request.body)
 
             campos_obligatorios = ["descripcion", "titulo", "tipoUser", "fecha", "alumno", "tipoNota"]
+            campos_opcionales = ["fechaRecordatorio", "gravedad"]
+            campos_permitidos = set(campos_obligatorios + campos_opcionales)
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
+            campos_invalidos = [campo for campo in data if campo not in campos_permitidos]
+
 
             if faltantes:
                 return {
                     "code": "400",
                     "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"
+                }
+            
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
                 }
 
             if data.get("tipoUser") not in ["maestro", "usuario"]:
@@ -265,14 +286,12 @@ def get_notas_alumno(request):
 
             if data.get("tipoNota") not in ["informacion", "recordatorio", "incidencia"]:
                 return {"code": "400", "error": "tipoNota debe ser 'informacion', 'recordatorio' o 'incidencia'"}
-
-
+            elif data.get("tipoNota") == "incidencia" and "gravedad" not in data:
+                return {"code": "400", "error": "El campo 'gravedad' es obligatorio cuando tipoNota es 'incidencia'"}
+            
             firestore_payload = transformar_a_firestore_fields(data)
             url_notas = os.getenv('URL_NOTAS')
-
-
             response = requests.post(url_notas, headers=headers, json=firestore_payload)
-
             if response.status_code not in [200, 201]:
                 return {
                     "code": str(response.status_code),
@@ -380,19 +399,32 @@ def get_alumnos(request):
     elif request.method == "POST":
         try:
             data = json.loads(request.body)
-            campos_obligatorios = ["nombre", "apellidos", "genero", "edad", "idioma", "cumpleanios"]
+
+            campos_obligatorios = ["apellidos", "edad", "cumpleanios", "genero", "idioma", "nombre"]
+            campos_opcionales = ["alergias", "ausencias", "conflictos", "enfermedades", "consumo", "medicamentos", "mochilas", "necesidades", "rutinaSuenio"]
+            campos_permitidos = set(campos_obligatorios + campos_opcionales)
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
+            campos_invalidos = [campo for campo in data if campo not in campos_permitidos]
+
 
             if faltantes:
                 return {
                     "code": "400",
                     "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"
                 }
+            
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
 
+            if data.get("genero") not in ["Mujer", "Hombre"]:
+                return {"code": "400", "error": "genero debe ser 'Mujer' o 'Hombre'"}
+            
             firestore_payload = transformar_a_firestore_fields(data)
 
             response = requests.post(base_url, headers=headers, json=firestore_payload)
-
             if response.status_code not in [200, 201]:
                 return {
                     "code": str(response.status_code),
@@ -526,20 +558,37 @@ def get_noticias(request):
     elif request.method == "POST":
         try:
             data = json.loads(request.body)
-            campos_obligatorios = ["titulo", "descripcion", "imagen"]
+
+            campos_obligatorios = ["descripcion", "fecha", "titulo"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
+            campos_invalidos = [campo for campo in data if campo not in campos_obligatorios]
+
 
             if faltantes:
-                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
-
+                return {
+                    "code": "400",
+                    "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"
+                }
+            
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+            
             firestore_payload = transformar_a_firestore_fields(data)
-
             response = requests.post(base_url, headers=headers, json=firestore_payload)
-
             if response.status_code not in [200, 201]:
-                return {"code": str(response.status_code), "error": response.text}
+                return {
+                    "code": str(response.status_code),
+                    "error": f"Firestore error: {response.text}"
+                }
 
-            return {"code": "201", "message": "Noticia añadida correctamente"}
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+            return {"code": "201", "message": "Noticia añadida correctamente", "id": document_id}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
@@ -757,9 +806,17 @@ def get_medicamentos(request):
             data = json.loads(request.body)
             campos_obligatorios = ["nombre", "dosis", "horarioAdministracion", "frecuencia", "metodoAdministracion"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
-
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
 
             try:
                 data["horarioAdministracion"] = validar_horario_string(data["horarioAdministracion"])
@@ -863,10 +920,22 @@ def get_alergias(request):
             data = json.loads(request.body)
 
             campos_obligatorios = ["nombre", "tipo", "gravedad", "fechaDiagnostico", "reaccion", "tratamiento", "sintomas"]
+            campos_opcionales = ["observaciones"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
 
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+            
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios + campos_opcionales)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
 
             firestore_payload = transformar_a_firestore_fields(data)
 
@@ -961,10 +1030,21 @@ def get_enfermedades(request):
             data = json.loads(request.body)
 
             campos_obligatorios = ["nombre", "contagiosa", "tratamiento", "gravedad", "descripcion"]
+            campos_opcionales = ["observaciones"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
 
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios + campos_opcionales)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
 
             firestore_payload = transformar_a_firestore_fields(data)
 
@@ -1059,10 +1139,22 @@ def get_necesidades(request):
             data = json.loads(request.body)
 
             campos_obligatorios = ["tipo", "fecha", "ayuda"]
+            campos_opcionales = ["comentarios"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
 
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+            
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios + campos_opcionales)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
 
             firestore_payload = transformar_a_firestore_fields(data)
 
@@ -1160,6 +1252,17 @@ def get_conflictos(request):
 
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+            
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
 
             firestore_payload = transformar_a_firestore_fields(data)
 
@@ -1257,6 +1360,17 @@ def get_rutina(request):
 
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+            
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
 
             firestore_payload = transformar_a_firestore_fields(data)
 
@@ -1354,6 +1468,17 @@ def get_mochilas(request):
 
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+            
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
 
             firestore_payload = transformar_a_firestore_fields(data)
 
@@ -1452,6 +1577,17 @@ def get_consumo(request):
 
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+            
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
 
             firestore_payload = transformar_a_firestore_fields(data)
 
@@ -1545,11 +1681,23 @@ def get_ausencias(request):
         try:
             data = json.loads(request.body)
 
-            campos_obligatorios = ["notificado", "estado", "fechaNotificacion", "fecha", "comentarios", "motivo"]
+            campos_obligatorios = ["notificado", "estado", "fechaNotificacion", "fecha", "comentarios", "motivo", "justificado"]
+            campos_opcionales=["motivoJustificacion"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
 
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+            
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios + campos_opcionales)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
 
             firestore_payload = transformar_a_firestore_fields(data)
 

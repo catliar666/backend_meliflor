@@ -43,7 +43,7 @@ def transformar_a_firestore_fields(data: dict) -> dict:
     firestore_fields = {}
 
     campos_timestamp = {"fecha", "fechaRecordatorio", "fechaDiagnostico", "fechaNotificacion", "fechaFin", "fechaComienzo", "fechaInscripcion", "cumpleanios"}
-    campos_referencia = {"alumno", "ausencias", "conflictos", "consumo", "enfermedades", "alergias", "medicamentos", "necesidades", "rutinaSuenio" }  # Aquí defines tus campos de tipo referencia
+    campos_referencia = {"alumno", "ausencias", "conflictos", "consumo", "enfermedades", "alergias", "medicamentos", "necesidades", "rutinaSuenio", "idPlato", "platos", "idUser", "hijos"}  # Aquí defines tus campos de tipo referencia
 
     project_id = os.getenv("PROJECT_ID")
 
