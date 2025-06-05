@@ -14,6 +14,7 @@ from .parsers.suenio_parse import parse_suenio_document
 from .parsers.mochilas_parse import parse_mochila_document
 from .parsers.ausencias_parse import parse_ausencia_document
 from .parsers.consumo_parse import parse_consumo_document
+from .parsers.notas_parse import parse_notas_document
 from .helpers import transformar_a_firestore_fields, validar_horario_string
 from datetime import datetime, timedelta
 
@@ -203,7 +204,7 @@ def obtener_menu_de_la_semana(request):
 
 def get_notas_alumno(request, uid):
     token = obtener_token_acceso()
-    url = f"{os.getenv('URL_ALUMNOS')}{uid}"
+    urlAlumno = f"{os.getenv('URL_ALUMNOS')}{uid}"
 
     if request.method == "GET":
         try:
@@ -215,7 +216,7 @@ def get_notas_alumno(request, uid):
                         "field": {"fieldPath": "alumno"},
                         "op": "EQUAL",
                         "value": {
-                            "referenceValue": url
+                            "referenceValue": urlAlumno
                         }
                     }
                 }
@@ -234,18 +235,53 @@ def get_notas_alumno(request, uid):
 
             notas_raw = response.json()
             notas = [
-                {
-                    "descripcion": n["document"]["fields"]["descripcion"]["stringValue"],
-                    "fecha": n["document"]["fields"]["fecha"]["timestampValue"],
-                    "id": n["document"]["name"].split("/")[-1]
-                }
-                for n in notas_raw if "document" in n
-            ]
+                    parse_notas_document(result["document"])
+                    for result in notas_raw if "document" in result
+                ]
 
             return {"code":"200", "message": notas}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            campos_obligatorios = ["descripcion", "titulo", "tipoUser", "fecha", "alumno", "tipoNota"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {
+                    "code": "400",
+                    "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"
+                }
+            
+            tipo_user_valido = data.get("tipoUser") in ["maestro", "usuario"]
+            if not tipo_user_valido:
+                return {"code": "400", "error": "tipoUser debe ser 'maestro' o 'usuario'"}
+
+            tipo_nota_valido = data.get("tipoNota") in ["informacion", "recordatorio", "incidencia"]
+            if not tipo_nota_valido:
+                {"code": "400", "error": "tipoNota debe ser 'informacion', 'recordatorio' o 'incidencia'"}
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.post(os.getenv('URL_NOTAS'), headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {
+                    "code": str(response.status_code),
+                    "error": f"Firestore error: {response.text}"
+                }
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+            return {"code": "201", "message": "Nota añadido correctamente", "id": document_id}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
 
 
 
