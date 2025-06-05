@@ -4,9 +4,9 @@ from .views import usuario, token, menu_semanal, notas_por_alumno, alumnos, noti
 
 urlpatterns = [
     path('token/', token, name="firestore_token"),
-    path('usuarios/<str:uid>/', usuario, name='perfil_usuario'),
+    path('usuarios/', usuario, name='perfil_usuario'),
     path('menu/', menu_semanal, name='menus'),
-    path('notas/<str:uid>/', notas_por_alumno, name='notas_por_alumno'),
+    path('notas/', notas_por_alumno, name='notas_por_alumno'),
     path('alumnos/', alumnos, name='alumnos'),
     path('noticias/', noticias, name='noticias'),
     path('notification/', notifications, name='enviar_notificacion'),
