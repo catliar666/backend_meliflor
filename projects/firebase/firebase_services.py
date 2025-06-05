@@ -26,8 +26,9 @@ load_dotenv()
 
 
 
-def get_usuario_completo(request, uid):
+def get_usuario_completo(request):
     token = obtener_token_acceso()
+    uid = request.GET.get("uid")
     url = f"{os.getenv('URL_USUARIO')}{uid}"
 
     headers = {
@@ -96,8 +97,9 @@ def get_usuario_completo(request, uid):
 
 
 
-def get_administradores_completo(uid):
+def get_administradores_completo(request):
     token = obtener_token_acceso()
+    uid = request.GET.get("uid")
     url = f"{os.getenv('URL_ADMINISTRADORES')}{uid}"
 
     headers = {
@@ -202,8 +204,9 @@ def obtener_menu_de_la_semana(request):
 
     raise Exception("Método no permitido")
 
-def get_notas_alumno(request, uid):
+def get_notas_alumno(request):
     token = obtener_token_acceso()
+    uid = request.GET.get("uid")
     urlAlumno = f"{os.getenv('URL_ALUMNOS')}{uid}"
     headers = {
         "Authorization": f"Bearer {token}",
