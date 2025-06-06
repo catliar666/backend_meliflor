@@ -291,10 +291,16 @@ def get_notas_alumno(request):
             url_notas = os.getenv('URL_NOTAS')
             response = requests.post(url_notas, headers=headers, json=firestore_payload)
             if response.status_code not in [200, 201]:
+                print("❌ ERROR al guardar nota en Firestore")
+                print("🔢 Status:", response.status_code)
+                print("📩 Payload enviado:", json.dumps(firestore_payload, indent=2))
+                print("🧾 Respuesta de Firestore:", response.text)
+
                 return {
                     "code": str(response.status_code),
                     "error": f"Firestore error: {response.text}"
                 }
+
 
             doc = response.json()
             document_path = doc.get("name", "")
