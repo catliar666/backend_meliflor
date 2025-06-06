@@ -145,9 +145,14 @@ def obtener_rango_semana_actual():
     )
 
 
-
+import traceback
 def obtener_menu_de_la_semana(request):
     token = obtener_token_acceso()
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
 
     if request.method == "GET":
         url = os.getenv('URL_INDICE')
@@ -180,10 +185,7 @@ def obtener_menu_de_la_semana(request):
             }
         }
 
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
+
 
         response = requests.post(url, headers=headers, json=query)
 
@@ -197,10 +199,6 @@ def obtener_menu_de_la_semana(request):
     elif request.method == "POST":
         try:
             url = os.getenv('URL_MENUS')
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json"
-            }
 
             datos_transformados = transformar_a_firestore_fields(json.loads(request.body))
             response = requests.post(url, headers=headers, json=datos_transformados)
@@ -305,6 +303,7 @@ def get_notas_alumno(request):
             return {"code": "201", "message": "Nota añadida correctamente", "id": document_id}
 
         except Exception as e:
+            traceback.print_exc()
             return {"code": "500", "error": str(e)}
 
 
