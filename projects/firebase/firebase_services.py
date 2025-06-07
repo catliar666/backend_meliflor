@@ -103,6 +103,34 @@ def get_usuario_completo(request):
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
+    elif request.method == "PATCH":
+        try:
+            headers["Content-Type"] = "application/json"
+            data = json.loads(request.body)
+
+            campos_recibidos = set(data.keys())
+            campos_invalidos = campos_recibidos - set(campos_permitidos)
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
+            datos_transformados = transformar_a_firestore_fields(data)
+            response = requests.patch(url, headers=headers, json=datos_transformados)
+
+            if response.status_code not in [200, 201]:
+                raise Exception(f"Error {response.status_code}: {response.text}")
+
+            return {
+                "code": "200",
+                "message": "Usuario modificado correctamente",
+                "uid": uid
+            }
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
 
     return {"code": "405", "error": "Método no permitido"}
 
