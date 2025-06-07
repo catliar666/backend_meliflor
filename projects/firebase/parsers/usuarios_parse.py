@@ -46,7 +46,11 @@ def parse_usuario_document(doc):
         "autorizacionExcursiones": fields.get("autorizacionExcursiones", {}).get("booleanValue", False),
         "custodia": fields.get("custodia", {}).get("booleanValue", False),
         "seguroMedico": fields.get("seguroMedico", {}).get("booleanValue", False),
-        "cuotaPagada": extract_timestamps(fields.get("cuotaPagada", {})),
+        "cuotaPagada": [
+    convertir_fecha_utc_a_local(fecha)
+    for fecha in extract_timestamps(fields.get("cuotaPagada", {}))
+],
+
         "hijos": extract_ids_from_references(fields.get("hijos", {}))
     }
 
