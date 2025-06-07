@@ -42,8 +42,16 @@ def fetch_document_by_reference(ref_url):
 def transformar_a_firestore_fields(data: dict) -> dict:
     firestore_fields = {}
 
-    campos_timestamp = {"fecha", "fechaRecordatorio", "fechaDiagnostico", "fechaNotificacion", "fechaFin", "fechaComienzo", "fechaInscripcion", "cumpleanios"}
-    campos_referencia = {"alumno", "ausencias", "conflictos", "consumo", "enfermedades", "alergias", "medicamentos", "necesidades", "rutinaSuenio", "idPlato", "platos", "idUser", "hijos"}  # Aquí defines tus campos de tipo referencia
+    campos_timestamp = {
+        "fecha", "fechaRecordatorio", "fechaDiagnostico", "fechaNotificacion",
+        "fechaFin", "fechaComienzo", "fechaInscripcion", "cumpleanios"
+    }
+
+    campos_referencia = {
+        "alumno", "ausencias", "conflictos", "consumo", "enfermedades", "alergias",
+        "medicamentos", "necesidades", "rutinaSuenio", "idPlato", "platos",
+        "idUser", "hijos"
+    }
 
     project_id = os.getenv("PROJECT_ID")
 
@@ -59,13 +67,14 @@ def transformar_a_firestore_fields(data: dict) -> dict:
 
         # Referencias
         elif key in campos_referencia:
-            path = value.lstrip("/")  # elimina el '/' inicial si viene como "/alumnos/..."
+            path = value.lstrip("/")
             reference = f"projects/{project_id}/databases/(default)/documents/{path}"
             firestore_fields[key] = {"referenceValue": reference}
 
-        # Strings normales
+        # Strings
         elif isinstance(value, str):
             firestore_fields[key] = {"stringValue": value}
+
         # Booleanos
         elif isinstance(value, bool):
             firestore_fields[key] = {"booleanValue": value}
@@ -74,9 +83,27 @@ def transformar_a_firestore_fields(data: dict) -> dict:
         elif isinstance(value, int):
             firestore_fields[key] = {"integerValue": str(value)}
 
+        # Lista de DateTime (cuotaPagada, etc.)
+        elif isinstance(value, list) and all(isinstance(v, (datetime, str)) for v in value):
+            # Si todos los elementos son datetime o ISO 8601 strings, tratar como timestamp
+            try:
+                timestamp_values = []
+                for v in value:
+                    if isinstance(v, str):
+                        dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
+                    else:
+                        dt = v
+                    utc_dt = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+                    timestamp_values.append({"timestampValue": utc_dt})
 
+                firestore_fields[key] = {"arrayValue": {"values": timestamp_values}}
+            except Exception:
+                # Si falla la conversión, tratar como strings normales
+                firestore_fields[key] = {
+                    "arrayValue": {"values": [{"stringValue": str(v)} for v in value]}
+                }
 
-        # Listas de strings
+        # Lista de strings normales
         elif isinstance(value, list) and all(isinstance(v, str) for v in value):
             firestore_fields[key] = {
                 "arrayValue": {"values": [{"stringValue": v} for v in value]}
@@ -86,6 +113,7 @@ def transformar_a_firestore_fields(data: dict) -> dict:
             raise ValueError(f"No se puede procesar el campo '{key}' con valor '{value}'")
 
     return {"fields": firestore_fields}
+
 
 
 
