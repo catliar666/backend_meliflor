@@ -66,14 +66,15 @@ def transformar_a_firestore_fields(data: dict) -> dict:
         # Strings normales
         elif isinstance(value, str):
             firestore_fields[key] = {"stringValue": value}
+        # Booleanos
+        elif isinstance(value, bool):
+            firestore_fields[key] = {"booleanValue": value}
 
         # Enteros
         elif isinstance(value, int):
             firestore_fields[key] = {"integerValue": str(value)}
 
-        # Booleanos
-        elif isinstance(value, bool):
-            firestore_fields[key] = {"booleanValue": value}
+
 
         # Listas de strings
         elif isinstance(value, list) and all(isinstance(v, str) for v in value):
