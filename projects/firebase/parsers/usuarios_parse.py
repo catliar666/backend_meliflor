@@ -4,11 +4,18 @@ from projects.firebase.helpers import convertir_fecha_utc_a_local
 def parse_usuario_document(doc):
     fields = doc.get("fields", {})
 
+    def get_value(field, key, default=""):
+        return field.get(key, default)
+
     def extract_array(field, key="stringValue"):
         return [item.get(key, "") for item in field.get("arrayValue", {}).get("values", [])]
 
     def extract_timestamps(field):
-        return [item.get("timestampValue", "") for item in field.get("arrayValue", {}).get("values", [])]
+        return [
+            item.get("timestampValue", "")
+            for item in field.get("arrayValue", {}).get("values", [])
+            if item.get("timestampValue")
+        ]
 
     def extract_ids_from_references(field):
         values = field.get("arrayValue", {}).get("values", [])
@@ -22,19 +29,19 @@ def parse_usuario_document(doc):
     fecha_raw = fields.get("fechaInscripcion", {}).get("timestampValue", "")
     return {
         "id": doc["name"].split("/")[-1],
-        "nombre": fields.get("nombre", {}).get("stringValue", ""),
-        "apellidos": fields.get("apellidos", {}).get("stringValue", ""),
-        "dni": fields.get("dni", {}).get("stringValue", ""),
-        "telefono": fields.get("telefono", {}).get("integerValue", ""),
-        "telefonoEmergencia": fields.get("telefonoEmergencia", {}).get("integerValue", ""),
-        "direccion": fields.get("direccion", {}).get("stringValue", ""),
-        "genero": fields.get("genero", {}).get("stringValue", ""),
-        "ocupacion": fields.get("ocupacion", {}).get("stringValue", ""),
-        "nacionalidad": fields.get("nacionalidad", {}).get("stringValue", ""),
-        "estadoCivil": fields.get("estadoCivil", {}).get("stringValue", ""),
+        "nombre": get_value(fields.get("nombre", {}), "stringValue"),
+        "apellidos": get_value(fields.get("apellidos", {}), "stringValue"),
+        "dni": get_value(fields.get("dni", {}), "stringValue"),
+        "telefono": get_value(fields.get("telefono", {}), "integerValue"),
+        "telefonoEmergencia": get_value(fields.get("telefonoEmergencia", {}), "integerValue"),
+        "direccion": get_value(fields.get("direccion", {}), "stringValue"),
+        "genero": get_value(fields.get("genero", {}), "stringValue"),
+        "ocupacion": get_value(fields.get("ocupacion", {}), "stringValue"),
+        "nacionalidad": get_value(fields.get("nacionalidad", {}), "stringValue"),
+        "estadoCivil": get_value(fields.get("estadoCivil", {}), "stringValue"),
         "fechaInscripcion": convertir_fecha_utc_a_local(fecha_raw),
-        "role": fields.get("role", {}).get("stringValue", ""),
-        "suscripcion": fields.get("suscripcion", {}).get("stringValue", ""),
+        "role": get_value(fields.get("role", {}), "stringValue"),
+        "suscripcion": get_value(fields.get("suscripcion", {}), "stringValue"),
         "autorizacionFotos": fields.get("autorizacionFotos", {}).get("booleanValue", False),
         "autorizacionExcursiones": fields.get("autorizacionExcursiones", {}).get("booleanValue", False),
         "custodia": fields.get("custodia", {}).get("booleanValue", False),
@@ -42,4 +49,5 @@ def parse_usuario_document(doc):
         "cuotaPagada": extract_timestamps(fields.get("cuotaPagada", {})),
         "hijos": extract_ids_from_references(fields.get("hijos", {}))
     }
+
 
