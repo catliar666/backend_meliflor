@@ -17,7 +17,7 @@ urlpatterns = [
     path('conflictos/', conflictos, name='conflictos'),
     path('ausencias/', ausencias, name='ausencias'),
     path('mochilas/', mochilas, name='mochilas'),
-    path('consumo/', consumo, name='consumo')
+    path('consumo/', consumo, name='consumo'),
     path('rutina/', rutinaSuenio, name='rutina')
 ]
 
