@@ -11,9 +11,11 @@ def parse_consumo_document(doc):
             plato_fields = plato_doc.get("fields", {})
             plato_id = plato_doc.get("name", "").split("/")[-1]
             plato_nombre = plato_fields.get("nombre", {}).get("stringValue", "")
+            plato_categoria = plato_fields.get("categoria", {}).get("stringValue", "")
             plato_data = {
                 "id": plato_id,
-                "nombre": plato_nombre
+                "nombre": plato_nombre,
+                "categoria": plato_categoria
             }
         except Exception as e:
             print(f"Error al obtener el plato: {e}")
