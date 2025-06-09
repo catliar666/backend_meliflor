@@ -20,14 +20,20 @@ def token(request):
 @csrf_exempt
 def usuario(request):
     try:
-        usuario = get_usuario_completo(request)
-        administrador = get_administradores_completo(request)
-        if usuario is None and administrador is None:
-            return JsonResponse({'code': str('404'), 'error': str('Usuario no encontrado')}, status=404)
-        elif usuario is not None: return JsonResponse(usuario, status=usuario['code'])
-        else: return JsonResponse(administrador, status=usuario['code'])
+        usuario_data = get_usuario_completo(request)
+
+        if usuario_data.get("code") != "200":
+            administrador_data = get_administradores_completo(request)
+            if administrador_data is None or administrador_data.get("code") != "200":
+                return JsonResponse({'code': "404", 'error': "Usuario no encontrado"}, status=404)
+            else:
+                return JsonResponse(administrador_data, status=int(administrador_data["code"]))
+        else:
+            return JsonResponse(usuario_data, status=int(usuario_data["code"]))
+
     except Exception as e:
-        return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+        return JsonResponse({'code': "500", 'error': str(e)}, status=500)
+
 
 @csrf_exempt   
 def menu_semanal(request):
