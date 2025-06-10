@@ -346,6 +346,7 @@ def get_alumnos(request):
     nombre = request.GET.get("nombre")
     apellidos = request.GET.get("apellidos")
     cumpleanios = request.GET.get("cumpleanios")
+    url_uid = f"{base_url}{uid}"
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -468,36 +469,23 @@ def get_alumnos(request):
         except Exception as e:
             return {"code": "500", "error": str(e)}
 
+   
     elif request.method == "PATCH":
         try:
-            data = json.loads(request.body)
-            uid = request.GET.get("uid")
 
             if not uid:
-                return {"code": "400", "error": "Falta el campo obligatorio 'uid' para identificar el alumno"}
-            campos_actualizados = {}
-            for key, value in data.items():
-                if key == "uid":
-                    continue
-                if key == "edad":
-                    campos_actualizados[key] = {"integerValue": str(value)}
-                elif key == "cumpleanios":
-                    campos_actualizados[key] = {"timestampValue": value}
-                else:
-                    campos_actualizados[key] = {"stringValue": value}
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar al alumno"}
 
-            if not campos_actualizados:
-                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
+            data = json.loads(request.body)
 
-            url_patch = f"{base_url}{uid}"
-            payload = {"fields": campos_actualizados}
+            firestore_payload = transformar_a_firestore_fields(data)
 
-            response = requests.patch(url_patch, headers=headers, json=payload)
+            response = requests.patch(url_uid, headers=headers, json=firestore_payload)
 
             if response.status_code not in [200, 204]:
                 return {"code": str(response.status_code), "error": response.text}
 
-            return {"code": "200", "message": f"Alumno '{uid}' actualizado correctamente"}
+            return {"code": "200", "message": f"Medicamento '{uid}' actualizado correctamente"}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
