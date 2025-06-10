@@ -1481,32 +1481,19 @@ def get_mochilas(request):
 
             campos_obligatorios = ["fecha", "objetos"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
-
+            
             if faltantes:
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
-            
-            campos_recibidos = set(data.keys())
-            campos_permitidos = set(campos_obligatorios)
-            campos_invalidos = campos_recibidos - campos_permitidos
-
-            if campos_invalidos:
-                return {
-                    "code": "400",
-                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
-                }
-
 
             firestore_payload = transformar_a_firestore_fields(data)
-
             response = requests.post(base_url, headers=headers, json=firestore_payload)
-
+            
             if response.status_code not in [200, 201]:
                 return {"code": str(response.status_code), "error": response.text}
-
-            doc = response.json()
-            document_path = doc.get("name", "")
+            
+            firestore_response = response.json()
+            document_path = firestore_response.get("name", "")
             document_id = document_path.split("/")[-1]
-
 
             return {"code": "201", "message": "Mochila añadida correctamente", "id": document_id}
 
