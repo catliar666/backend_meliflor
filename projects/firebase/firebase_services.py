@@ -1501,7 +1501,16 @@ def get_mochilas(request):
             return {"code": "201", "message": "Mochila añadida correctamente", "id": document_id}
 
         except Exception as e:
-            return {"code": "500", "error": str(e)}
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            return {
+                "code": "500",
+                "error": str(e),
+                "type": type(e).__name__,
+                "traceback": traceback.format_exc(),
+                "file": exc_traceback.tb_frame.f_code.co_filename,
+                "line": exc_traceback.tb_lineno,
+                "function": exc_traceback.tb_frame.f_code.co_name
+            }
 
     elif request.method == "PATCH":
         try:
