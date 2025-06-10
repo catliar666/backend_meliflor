@@ -132,43 +132,13 @@ def ausencias(request):
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
     
-import sys
-import traceback
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
 @csrf_exempt
 def mochilas(request):
     try:
-        mochilas = get_mochilas(request)
+        mochilas =  get_mochilas(request)
         return JsonResponse(mochilas, status=mochilas['code'], safe=False)
     except Exception as e:
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        
-        error_details = {
-            'code': '500',
-            'error': str(e),
-            'type': exc_type.__name__,
-            'traceback': traceback.format_exc(),
-            'filename': exc_traceback.tb_frame.f_code.co_filename,
-            'line_number': exc_traceback.tb_lineno,
-            'function_name': exc_traceback.tb_frame.f_code.co_name,
-            'request_method': request.method,
-            'request_path': request.path,
-        }
-        
-        # Opcional: Imprimir el error en consola para debugging
-        print("\n--- ERROR DETALLADO ---")
-        print(f"Tipo: {error_details['type']}")
-        print(f"Mensaje: {error_details['error']}")
-        print(f"Archivo: {error_details['filename']}")
-        print(f"Línea: {error_details['line_number']}")
-        print(f"Función: {error_details['function_name']}")
-        print("Traceback completo:")
-        print(error_details['traceback'])
-        print("-----------------------\n")
-        
-        return JsonResponse(error_details, status=500)
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
     
 @csrf_exempt
 def consumo(request):
