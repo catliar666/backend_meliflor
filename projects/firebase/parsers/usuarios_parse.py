@@ -27,7 +27,7 @@ def parse_usuario_document(doc):
         return ids
 
     fecha_raw = fields.get("fechaInscripcion", {}).get("timestampValue", "")
-    tokens_fcm = extract_strings(fields.get("tokenFCM", {})) if "tokenFCM" in fields else []
+    tokens_fcm = extract_array(fields.get("tokenFCM", {})) if "tokenFCM" in fields else []
     return {
         "id": doc["name"].split("/")[-1],
         "nombre": get_value(fields.get("nombre", {}), "stringValue"),
