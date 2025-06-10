@@ -28,8 +28,6 @@ def parse_alumno_document(doc):
     enfermedades_ref = extract_refs(fields.get("enfermedades", {}))
     enfermedades_id = extract_id_from_ref(enfermedades_ref) if enfermedades_ref else None
 
-    medicamentos_ref = extract_refs(fields.get("alergias", {}))
-    medicamentos_id = extract_id_from_ref(alergias_ref) if alergias_ref else None
 
     necesidades_ref = extract_refs(fields.get("necesidades", {}))
     necesidades_id = extract_id_from_ref(necesidades_ref) if necesidades_ref else None
