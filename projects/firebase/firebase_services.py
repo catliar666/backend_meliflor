@@ -1442,35 +1442,46 @@ def get_rutina(request):
 
     return {"code": "405", "error": "Método no permitido"}
 
-
+import sys
+import traceback
 
 def get_mochilas(request):
-    if request.method not in ["GET", "POST", "PATCH", "DELETE"]:
-        return {"code": "405", "error": "Método no permitido"}
+    token = obtener_token_acceso()
+    base_url = os.getenv('URL_MOCHILAS')
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
 
-    try:
-        token = obtener_token_acceso()
-        base_url = os.getenv('URL_MOCHILAS')
-        uid = request.GET.get("uid")
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json"
-        }
+    if request.method == "GET":
+        try:
+            if uid:
+                response = requests.get(f"{base_url}{uid}", headers=headers)
+            else:
+                response = requests.get(base_url, headers=headers)
 
-        if request.method == "GET":
-            target_url = f"{base_url}{uid}" if uid else base_url
-            response = requests.get(target_url, headers=headers)
-            
             if response.status_code != 200:
                 return {"code": "500", "error": response.text}
 
             data = response.json()
-            result = parse_mochila_document(data) if uid else [parse_mochila_document(doc) for doc in data.get("documents", [])]
-            return {"code": "200", "data": result}
 
-        elif request.method == "POST":
+            if uid:
+                mochila = parse_mochila_document(data)
+                return {"code": "200", "message": mochila}
+            else:
+                documentos = data.get("documents", [])
+                mochila = [parse_mochila_document(doc) for doc in documentos]
+                return {"code": "200", "message": mochila}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "POST":
+        try:
             data = json.loads(request.body)
-            
+
             campos_obligatorios = ["fecha", "objetos"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
             
@@ -1483,41 +1494,60 @@ def get_mochilas(request):
             if response.status_code not in [200, 201]:
                 return {"code": str(response.status_code), "error": response.text}
             
-            document_id = response.json().get("name", "").split("/")[-1]
+            firestore_response = response.json() 
+            document_path = firestore_response.get("name", "")
+            document_id = document_path.split("/")[-1]
+
             return {"code": "201", "message": "Mochila añadida correctamente", "id": document_id}
 
-        elif request.method == "PATCH":
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
             if not uid:
                 return {"code": "400", "error": "Se requiere 'uid' para actualizar la mochila"}
 
             data = json.loads(request.body)
+            campos_actualizados = {}
+
             campos_actualizados = transformar_a_firestore_fields(data)
 
-            if not campos_actualizados.get("fields"):
-                return {"code": "400", "error": "No se proporcionaron campos válidos para actualizar"}
+            if not campos_actualizados:
+                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
 
-            response = requests.patch(f"{base_url}{uid}", headers=headers, json=campos_actualizados)
-            
+            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+
             if response.status_code not in [200, 204]:
                 return {"code": str(response.status_code), "error": response.text}
-                
-            return {"code": "200", "message": f"Mochila '{uid}' actualizada correctamente"}
 
-        elif request.method == "DELETE":
+            return {"code": "200", "message": f"Mochila '{uid}' actualizado correctamente"}
+
+        except Exception as e:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            return {
+                "code": "500",
+                "error": str(e),
+                "type": type(e).__name__,
+                "traceback": traceback.format_exc(),
+                "file": exc_traceback.tb_frame.f_code.co_filename,
+                "line": exc_traceback.tb_lineno,
+                "function": exc_traceback.tb_frame.f_code.co_name
+            }
+    elif request.method == "DELETE":
+        try:
             if not uid:
-                return {"code": "400", "error": "Se requiere 'uid' para eliminar la mochila"}
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar una rutina"}
 
-            response = requests.delete(f"{base_url}{uid}", headers=headers)
-            
+            response = requests.delete(url_uid, headers=headers)
+
             if response.status_code not in [200, 204]:
                 return {"code": str(response.status_code), "error": response.text}
-                
             return {"code": "200", "message": f"Mochila '{uid}' eliminada correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
 
-    except json.JSONDecodeError:
-        return {"code": "400", "error": "JSON mal formado"}
-    except Exception as e:
-        return {"code": "500", "error": str(e)}
+    return {"code": "405", "error": "Método no permitido"}
 
 
 def get_consumo(request):
