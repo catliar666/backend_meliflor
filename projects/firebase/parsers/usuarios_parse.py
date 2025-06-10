@@ -27,6 +27,7 @@ def parse_usuario_document(doc):
         return ids
 
     fecha_raw = fields.get("fechaInscripcion", {}).get("timestampValue", "")
+    tokens_fcm = extract_strings(fields.get("tokenFCM", {})) if "tokenFCM" in fields else []
     return {
         "id": doc["name"].split("/")[-1],
         "nombre": get_value(fields.get("nombre", {}), "stringValue"),
@@ -46,6 +47,7 @@ def parse_usuario_document(doc):
         "autorizacionExcursiones": fields.get("autorizacionExcursiones", {}).get("booleanValue", False),
         "custodia": fields.get("custodia", {}).get("booleanValue", False),
         "seguroMedico": fields.get("seguroMedico", {}).get("booleanValue", False),
+        "tokenFCM": tokens_fcm,
         "cuotaPagada": [
     convertir_fecha_utc_a_local(fecha)
     for fecha in extract_timestamps(fields.get("cuotaPagada", {}))

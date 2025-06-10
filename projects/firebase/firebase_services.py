@@ -485,7 +485,7 @@ def get_alumnos(request):
             if response.status_code not in [200, 204]:
                 return {"code": str(response.status_code), "error": response.text}
 
-            return {"code": "200", "message": f"Medicamento '{uid}' actualizado correctamente"}
+            return {"code": "200", "message": f"Alumno '{uid}' actualizado correctamente"}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}

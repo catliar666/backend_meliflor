@@ -12,14 +12,13 @@ def validar_horario_string(horario):
 
 from datetime import datetime, timezone, timedelta
 
-# Conversión de timestamp ISO Firestore a UTC+2 en formato string legible
 def convertir_fecha_utc_a_local(timestamp_str, offset_horas=2):
     if not timestamp_str:
         return ""
     dt_utc = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
     zona_local = timezone(timedelta(hours=offset_horas))
     dt_local = dt_utc.astimezone(zona_local)
-    return dt_local.strftime("%Y-%m-%d %H:%M:%S")  # o usa el formato que prefieras
+    return dt_local.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def fetch_document_by_reference(ref_url):
@@ -56,7 +55,6 @@ def transformar_a_firestore_fields(data: dict) -> dict:
     project_id = os.getenv("PROJECT_ID")
 
     for key, value in data.items():
-        # Timestamps
         if key in campos_timestamp:
             if isinstance(value, str):
                 dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -65,10 +63,9 @@ def transformar_a_firestore_fields(data: dict) -> dict:
             utc_dt = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
             firestore_fields[key] = {"timestampValue": utc_dt}
 
-        # Referencias (individuales o listas)
+
         elif key in campos_referencia:
             if isinstance(value, list):
-                # Manejar lista de referencias
                 references = []
                 for item in value:
                     path = item.lstrip("/") if isinstance(item, str) else str(item)

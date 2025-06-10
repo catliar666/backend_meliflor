@@ -51,6 +51,8 @@ def parse_alumno_document(doc):
 
     cumpleanios_raw = fields.get("cumpleanios", {}).get("timestampValue", "")
 
+
+
     return {
         "id": doc["name"].split("/")[-1],
         "nombre": fields.get("nombre", {}).get("stringValue", ""),
@@ -67,5 +69,5 @@ def parse_alumno_document(doc):
         "rutinaSuenio": rutinaSuenio_id,
         "ausencias": ausencias_id,
         "mochilas": mochilas_id,
-        "consumo": consumo_id,
+        "consumo": consumo_id
     }
