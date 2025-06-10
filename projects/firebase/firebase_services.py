@@ -1459,21 +1459,18 @@ def get_mochilas(request):
         try:
             if uid:
                 response = requests.get(f"{base_url}{uid}", headers=headers)
+                if response.status_code != 200:
+                    return {"code": "500", "error": response.text}
+                data = response.json()
+                return {"code": "200", "data": parse_mochila_document(data)}
             else:
                 response = requests.get(base_url, headers=headers)
-
-            if response.status_code != 200:
-                return {"code": "500", "error": response.text}
-
-            data = response.json()
-
-            if uid:
-                mochila = parse_mochila_document(data)
-                return {"code": "200", "message": mochila}
-            else:
+                if response.status_code != 200:
+                    return {"code": "500", "error": response.text}
+                data = response.json()
                 documentos = data.get("documents", [])
-                mochila = [parse_mochila_document(doc) for doc in documentos]
-                return {"code": "200", "message": mochila}
+                mochilas = [parse_mochila_document(doc) for doc in documentos]
+                return {"code": "200", "data": mochilas}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
