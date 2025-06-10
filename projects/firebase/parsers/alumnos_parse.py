@@ -13,7 +13,8 @@ def parse_alumno_document(doc):
     fields = doc.get("fields", {})
 
     def extract_refs(field):
-        return [item.get("referenceValue", "") for item in field.get("arrayValue", {}).get("values", [])]
+        refs = [item.get("referenceValue", "") for item in field.get("arrayValue", {}).get("values", [])]
+        return [ref for ref in refs if ref]
     
     def extract_id_from_ref(refs):
         return [ref.rstrip("/").split("/")[-1] for ref in refs]
@@ -42,6 +43,7 @@ def parse_alumno_document(doc):
     ausencias_id = extract_id_from_ref(ausencias_ref) if ausencias_ref else None
 
     mochilas_ref = extract_refs(fields.get("mochilas", {}))
+    print(mochilas_ref)
     mochilas_id = extract_id_from_ref(mochilas_ref) if mochilas_ref else None
 
     consumo_ref = extract_refs(fields.get("consumo", {}))

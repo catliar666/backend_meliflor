@@ -49,7 +49,7 @@ def transformar_a_firestore_fields(data: dict) -> dict:
     campos_referencia = {
         "alumno", "ausencias", "conflictos", "consumo", "enfermedades", "alergias",
         "medicamentos", "necesidades", "rutinaSuenio", "idPlato", "platos",
-        "idUser", "hijos"
+        "idUser", "hijos", "mochilas"
     }
 
     project_id = os.getenv("PROJECT_ID")
