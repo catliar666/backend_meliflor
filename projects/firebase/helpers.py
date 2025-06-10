@@ -65,11 +65,21 @@ def transformar_a_firestore_fields(data: dict) -> dict:
             utc_dt = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
             firestore_fields[key] = {"timestampValue": utc_dt}
 
-        # Referencias
+        # Referencias (individuales o listas)
         elif key in campos_referencia:
-            path = value.lstrip("/")
-            reference = f"projects/{project_id}/databases/(default)/documents/{path}"
-            firestore_fields[key] = {"referenceValue": reference}
+            if isinstance(value, list):
+                # Manejar lista de referencias
+                references = []
+                for item in value:
+                    path = item.lstrip("/") if isinstance(item, str) else str(item)
+                    reference = f"projects/{project_id}/databases/(default)/documents/{path}"
+                    references.append({"referenceValue": reference})
+                firestore_fields[key] = {"arrayValue": {"values": references}}
+            else:
+                # Manejar referencia individual
+                path = value.lstrip("/") if isinstance(value, str) else str(value)
+                reference = f"projects/{project_id}/databases/(default)/documents/{path}"
+                firestore_fields[key] = {"referenceValue": reference}
 
         # Strings
         elif isinstance(value, str):
@@ -85,7 +95,6 @@ def transformar_a_firestore_fields(data: dict) -> dict:
 
         # Lista de DateTime (cuotaPagada, etc.)
         elif isinstance(value, list) and all(isinstance(v, (datetime, str)) for v in value):
-            # Si todos los elementos son datetime o ISO 8601 strings, tratar como timestamp
             try:
                 timestamp_values = []
                 for v in value:
@@ -98,15 +107,14 @@ def transformar_a_firestore_fields(data: dict) -> dict:
 
                 firestore_fields[key] = {"arrayValue": {"values": timestamp_values}}
             except Exception:
-                # Si falla la conversión, tratar como strings normales
                 firestore_fields[key] = {
                     "arrayValue": {"values": [{"stringValue": str(v)} for v in value]}
                 }
 
-        # Lista de strings normales
-        elif isinstance(value, list) and all(isinstance(v, str) for v in value):
+        # Lista de strings normales (no referencias ni timestamps)
+        elif isinstance(value, list):
             firestore_fields[key] = {
-                "arrayValue": {"values": [{"stringValue": v} for v in value]}
+                "arrayValue": {"values": [{"stringValue": str(v)} for v in value]}
             }
 
         else:
