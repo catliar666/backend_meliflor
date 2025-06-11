@@ -118,7 +118,9 @@ def get_usuario_completo(request):
             datos_transformados = transformar_a_firestore_fields(data)
 
             # Construye la URL del documento con el UID
-            url = f"{os.getenv('URL_USUARIO')}{uid}"
+            update_mask = "&".join([f"updateMask.fieldPaths={campo}" for campo in data.keys()])
+            url = f"{os.getenv('URL_USUARIO')}{uid}?{update_mask}"
+
 
             print("📤 PATCH a Firestore")
             print("➡️ URL:", url)
