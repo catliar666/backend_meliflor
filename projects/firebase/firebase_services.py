@@ -98,40 +98,51 @@ def get_usuario_completo(request):
 
     elif request.method == "POST":
         try:
+            headers["Content-Type"] = "application/json"
             data = json.loads(request.body)
+            project_id = os.getenv('PROJECT_ID')
+
             id_usuario = data.get("id")
-            
             if not id_usuario:
-                return {"code": "400", "error": "Falta el campo 'id'"}
+                return {"code": "400", "error": "Falta el campo 'id' en el cuerpo de la solicitud"}
+
+            campos_obligatorios = [
+                "nombre", "apellidos", "dni", "telefono", "telefonoEmergencia",
+                "direccion", "genero", "ocupacion", "nacionalidad", "estadoCivil",
+                "fechaInscripcion", "role", "autorizacionFotos",
+                "autorizacionExcursiones", "custodia", "seguroMedico", "cuotaPagada"
+            ]
+
+            campos_faltantes = [campo for campo in campos_obligatorios if campo not in data]
+            if campos_faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(campos_faltantes)}"}
+
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios + ["hijos", "id"])  # Añadir "id" a los campos permitidos
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {"code": "400", "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"}
+
+            # Eliminar el campo 'id' del data para que no se incluya en los fields
+            data_sin_id = {k: v for k, v in data.items() if k != "id"}
+            datos_transformados = transformar_a_firestore_fields(data_sin_id)
+
+            # URL para crear un documento con ID específico
+            urlPost = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios?documentId={id_usuario}"
             
-            # Elimina el ID para que no se guarde como campo
-            data.pop("id", None)
-            
-            # Transforma los datos (AQUÍ ESTABA EL ERROR PRINCIPAL)
-            datos_transformados = transformar_a_firestore_fields(data)
-            print("Datos transformados:", json.dumps(datos_transformados, indent=2))  # Debug clave
-            
-            # URL correcta (como ya la tienes)
-            url = f"https://firestore.googleapis.com/v1/projects/meliflor-proyecto/databases/(default)/documents/usuarios?documentId={id_usuario}"
-            
-            print(datos_transformados)
-            # Petición con cuerpo bien formado
+            # Usamos POST para crear un nuevo documento
             response = requests.post(
-                url,
-                headers=headers,
-                json={"fields": datos_transformados["fields"]}  # ¡Esto es crítico!
+                urlPost, 
+                headers=headers, 
+                json={"fields": datos_transformados["fields"]}
             )
 
-            print(response)
-            
-            if response.status_code != 200 and response.status_code != 201:
-                return {
-                    "code": "400",
-                    "error": f"Firestore respondió con error {response.status_code}: {response.text}"
-                }
-                
-            return {"code": "201", "message": "Usuario creado", "uid": id_usuario}
-            
+            if response.status_code not in [200, 201]:
+                raise Exception(f"Error {response.status_code}: {response.text}")
+
+            return {"code": "201", "message": "Usuario creado correctamente", "uid": id_usuario}
+
         except Exception as e:
             return {"code": "500", "error": str(e)}
 
