@@ -173,7 +173,7 @@ def get_usuario_completo(request):
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(campos_faltantes)}"}
 
             campos_recibidos = set(data.keys())
-            campos_permitidos = set(campos_obligatorios + ["hijos", "id"])  # Añadir "id" a los campos permitidos
+            campos_permitidos = set(campos_obligatorios + ["hijos", "id", "tokenFCM"])  # Añadir "id" a los campos permitidos
             campos_invalidos = campos_recibidos - campos_permitidos
 
             if campos_invalidos:
