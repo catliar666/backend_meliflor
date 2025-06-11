@@ -126,13 +126,18 @@ def get_usuario_completo(request):
 
             datos_transformados = transformar_a_firestore_fields(data)
 
-            url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios/{id_usuario}"
-            response = requests.patch(url, headers=headers, json=datos_transformados)
+            # URL para crear un documento con ID específico
+            url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios?documentId={id_usuario}"
+            
+            # Usamos POST con el documentId en la URL para crear un nuevo documento
+            response = requests.post(url, headers=headers, json={
+                "fields": datos_transformados["fields"]
+            })
 
             if response.status_code not in [200, 201]:
                 raise Exception(f"Error {response.status_code}: {response.text}")
 
-            return {"code": "201", "message": "Usuario creado/modificado correctamente", "uid": id_usuario}
+            return {"code": "201", "message": "Usuario creado correctamente", "uid": id_usuario}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
