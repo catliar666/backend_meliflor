@@ -88,8 +88,12 @@ def get_usuario_completo(request):
         try:
             headers["Content-Type"] = "application/json"
             data = json.loads(request.body)
+            project_id = os.getenv('PROJECT_ID')
 
-            # Campos obligatorios
+            id_usuario = data.get("id")
+            if not id_usuario:
+                return {"code": "400", "error": "Falta el campo 'id'"}
+
             campos_obligatorios = [
                 "nombre", "apellidos", "dni", "telefono", "telefonoEmergencia",
                 "direccion", "genero", "ocupacion", "nacionalidad", "estadoCivil",
@@ -99,33 +103,28 @@ def get_usuario_completo(request):
 
             campos_faltantes = [campo for campo in campos_obligatorios if campo not in data]
             if campos_faltantes:
-                return {
-                    "code": "400",
-                    "error": f"Faltan campos obligatorios: {', '.join(campos_faltantes)}"
-                }
-            
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(campos_faltantes)}"}
+
             campos_recibidos = set(data.keys())
-            campos_permitidos = set(campos_obligatorios)
+            campos_permitidos = set(campos_obligatorios + ["id"])
             campos_invalidos = campos_recibidos - campos_permitidos
 
             if campos_invalidos:
-                return {
-                    "code": "400",
-                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
-                }
-
+                return {"code": "400", "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"}
 
             datos_transformados = transformar_a_firestore_fields(data)
 
+            url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios/{id_usuario}"
             response = requests.patch(url, headers=headers, json=datos_transformados)
 
             if response.status_code not in [200, 201]:
                 raise Exception(f"Error {response.status_code}: {response.text}")
 
-            return {"code": "201", "message": "Usuario creado/modificado correctamente", "uid": uid}
+            return {"code": "201", "message": "Usuario creado/modificado correctamente", "uid": id_usuario}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
+
 
     return {"code": "405", "error": "Método no permitido"}
 
