@@ -85,6 +85,7 @@ def get_usuario_completo(request):
         except Exception as e:
             return {"code": "500", "error": f"Error inesperado: {str(e)}"}
 
+
     elif request.method == "PATCH":
         try:
             headers["Content-Type"] = "application/json"
@@ -114,12 +115,20 @@ def get_usuario_completo(request):
                     "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
                 }
 
-            # Transforma los datos a formato Firestore
             datos_transformados = transformar_a_firestore_fields(data)
 
+            # Construye la URL del documento con el UID
+            url = f"{os.getenv('URL_USUARIO')}{uid}"
 
-            # Llama al PATCH
+            print("📤 PATCH a Firestore")
+            print("➡️ URL:", url)
+            print("➡️ Headers:", headers)
+            print("➡️ Body enviado:", datos_transformados)
+
             response = requests.patch(url, headers=headers, json=datos_transformados)
+
+            print("⬅️ Status code:", response.status_code)
+            print("⬅️ Respuesta:", response.text)
 
             if response.status_code not in [200, 201]:
                 raise Exception(f"Error {response.status_code}: {response.text}")
@@ -131,7 +140,14 @@ def get_usuario_completo(request):
             }
 
         except Exception as e:
+            print("❌ Excepción durante PATCH:")
+            print("🧾 Request body original:", request.body)
+            print("📦 Headers:", headers)
+            print("📍 UID:", uid)
+            print("🔧 Traceback:\n", traceback.format_exc())
+
             return {"code": "500", "error": str(e)}
+
 
     elif request.method == "POST":
         try:

@@ -24,6 +24,7 @@ def usuario(request):
             result = get_usuario_completo(request)
             if isinstance(result, dict) and str(result.get("code")) in ("200", "201"):
                 return JsonResponse(result, status=int(result["code"]))
+            print(result)
             return JsonResponse(result if result else {'code': "400", 'error': "Error en la solicitud"}, status=400)
         
         usuario_data = get_usuario_completo(request)
