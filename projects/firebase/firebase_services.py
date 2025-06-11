@@ -102,8 +102,7 @@ def get_usuario_completo(request):
             data = json.loads(request.body)
             project_id = os.getenv('PROJECT_ID')
 
-            id_usuario = data.get("id")
-            if not id_usuario:
+            if not uid:
                 return {"code": "400", "error": "Falta el campo 'id'"}
 
             campos_obligatorios = [
@@ -127,7 +126,7 @@ def get_usuario_completo(request):
             datos_transformados = transformar_a_firestore_fields(data)
 
             # URL para crear un documento con ID específico
-            url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios?documentId={id_usuario}"
+            url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios?documentId={uid}"
             
             # Usamos POST con el documentId en la URL para crear un nuevo documento
             response = requests.post(url, headers=headers, json={
@@ -137,7 +136,7 @@ def get_usuario_completo(request):
             if response.status_code not in [200, 201]:
                 raise Exception(f"Error {response.status_code}: {response.text}")
 
-            return {"code": "201", "message": "Usuario creado correctamente", "uid": id_usuario}
+            return {"code": "201", "message": "Usuario creado correctamente", "uid": uid}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
