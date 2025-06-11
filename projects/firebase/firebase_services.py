@@ -32,7 +32,8 @@ def get_usuario_completo(request):
     url = f"{os.getenv('URL_USUARIO')}{uid}"
 
     headers = {
-        "Authorization": f"Bearer {token}"
+        "Authorization": f"Bearer {token}",
+        "Content-Type":"application/json"
     }
 
     if request.method == "GET":
