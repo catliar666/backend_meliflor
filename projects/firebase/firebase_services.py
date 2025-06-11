@@ -94,8 +94,6 @@ def get_usuario_completo(request):
         except Exception as e:
             return {"code": "500", "error": str(e)}
 
-
-
     elif request.method == "POST":
         try:
             headers["Content-Type"] = "application/json"

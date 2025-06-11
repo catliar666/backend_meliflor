@@ -21,14 +21,16 @@ def token(request):
 def usuario(request):
     try:
         usuario_data = get_usuario_completo(request)
-        if isinstance(usuario_data, dict) and str(usuario_data.get("code")) == "200":
-            return JsonResponse(usuario_data, status=200)
+        if isinstance(usuario_data, dict) and str(usuario_data.get("code")) in ("200", "201"):
+            return JsonResponse(usuario_data, status=int(usuario_data["code"]))
+
         administrador_data = get_administradores_completo(request)
         if administrador_data is None:
             return JsonResponse({'code': "404", 'error': "Datos no disponibles"}, status=404)
             
-        if isinstance(administrador_data, dict) and str(administrador_data.get("code")) == "200":
-            return JsonResponse(administrador_data, status=200)
+        if isinstance(administrador_data, dict) and str(administrador_data.get("code")) in ("200", "201"):
+            return JsonResponse(administrador_data, status=int(administrador_data["code"]))
+
         return JsonResponse({'code': "404", 'error': "Usuario no encontrado"}, status=404)
 
     except Exception as e:
