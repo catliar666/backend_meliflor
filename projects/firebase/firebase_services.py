@@ -126,10 +126,10 @@ def get_usuario_completo(request):
             datos_transformados = transformar_a_firestore_fields(data)
 
             # URL para crear un documento con ID específico
-            url = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios?documentId={uid}"
+            urlPost = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios?documentId={uid}"
             
             # Usamos POST con el documentId en la URL para crear un nuevo documento
-            response = requests.post(url, headers=headers, json={
+            response = requests.post(urlPost, headers=headers, json={
                 "fields": datos_transformados["fields"]
             })
 
