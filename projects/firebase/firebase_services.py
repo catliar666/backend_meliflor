@@ -98,49 +98,41 @@ def get_usuario_completo(request):
 
     elif request.method == "POST":
         try:
-            print("\n🔥 Solicitud POST recibida")  # Debug
             data = json.loads(request.body)
-            project_id = os.getenv('PROJECT_ID')
             id_usuario = data.get("id")
             
-            print(f"ID recibido: {id_usuario}")  # Debug
             if not id_usuario:
                 return {"code": "400", "error": "Falta el campo 'id'"}
-
-            # Debug: Imprime todos los datos recibidos
-            print(f"Datos recibidos: {data}")
             
-            # Elimina el ID para que no se guarde en fields
+            # Elimina el ID para que no se guarde como campo
             data.pop("id", None)
+            
+            # Transforma los datos (AQUÍ ESTABA EL ERROR PRINCIPAL)
             datos_transformados = transformar_a_firestore_fields(data)
+            print("Datos transformados:", json.dumps(datos_transformados, indent=2))  # Debug clave
             
-            # Construye URL (IMPORTANTE)
-            url = (
-                f"https://firestore.googleapis.com/v1/projects/{project_id}/"
-                f"databases/(default)/documents/usuarios?documentId={id_usuario}"
-            )
+            # URL correcta (como ya la tienes)
+            url = f"https://firestore.googleapis.com/v1/projects/meliflor-proyecto/databases/(default)/documents/usuarios?documentId={id_usuario}"
             
-            print(f"URL Firestore: {url}")  # Debug
-            
-            # Realiza la petición
+            print(datos_transformados)
+            # Petición con cuerpo bien formado
             response = requests.post(
                 url,
                 headers=headers,
-                json={"fields": datos_transformados["fields"]}
+                json={"fields": datos_transformados["fields"]}  # ¡Esto es crítico!
             )
+
+            print(response)
             
-            print(f"Respuesta Firestore: {response.status_code} - {response.text}")  # Debug
-            
-            if response.status_code not in [200, 201]:
+            if response.status_code != 200 and response.status_code != 201:
                 return {
-                    "code": "404",
-                    "error": f"Firestore error: {response.status_code} - {response.text}"
+                    "code": "400",
+                    "error": f"Firestore respondió con error {response.status_code}: {response.text}"
                 }
                 
             return {"code": "201", "message": "Usuario creado", "uid": id_usuario}
-
+            
         except Exception as e:
-            print(f"⛔ Error: {str(e)}")  # Debug
             return {"code": "500", "error": str(e)}
 
 
