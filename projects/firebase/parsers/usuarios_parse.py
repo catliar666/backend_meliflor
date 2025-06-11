@@ -44,7 +44,6 @@ def parse_usuario_document(doc):
         "estadoCivil": get_value(fields.get("estadoCivil", {}), "stringValue"),
         "fechaInscripcion": convertir_fecha_utc_a_local(fecha_raw),
         "role": get_value(fields.get("role", {}), "stringValue"),
-        "suscripcion": get_value(fields.get("suscripcion", {}), "stringValue"),
         "autorizacionFotos": fields.get("autorizacionFotos", {}).get("booleanValue", False),
         "autorizacionExcursiones": fields.get("autorizacionExcursiones", {}).get("booleanValue", False),
         "custodia": fields.get("custodia", {}).get("booleanValue", False),

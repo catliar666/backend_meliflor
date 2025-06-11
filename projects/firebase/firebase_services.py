@@ -54,7 +54,7 @@ def get_usuario_completo(request):
                 "nombre", "apellidos", "dni", "telefono", "telefonoEmergencia",
                 "direccion", "genero", "ocupacion", "nacionalidad", "estadoCivil",
                 "fechaInscripcion", "role", "suscripcion", "autorizacionFotos",
-                "autorizacionExcursiones", "custodia", "seguroMedico", "cuotaPagada", "hijos"
+                "autorizacionExcursiones", "custodia", "seguroMedico", "cuotaPagada", "hijos", "tokenFCM"
             }
 
             campos_recibidos = set(data.keys())
@@ -97,8 +97,8 @@ def get_usuario_completo(request):
             campos_obligatorios = [
                 "nombre", "apellidos", "dni", "telefono", "telefonoEmergencia",
                 "direccion", "genero", "ocupacion", "nacionalidad", "estadoCivil",
-                "fechaInscripcion", "role", "suscripcion", "autorizacionFotos",
-                "autorizacionExcursiones", "custodia", "seguroMedico"
+                "fechaInscripcion", "role", "autorizacionFotos",
+                "autorizacionExcursiones", "custodia", "seguroMedico", "cuotaPagada"
             ]
 
             campos_faltantes = [campo for campo in campos_obligatorios if campo not in data]
@@ -106,7 +106,7 @@ def get_usuario_completo(request):
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(campos_faltantes)}"}
 
             campos_recibidos = set(data.keys())
-            campos_permitidos = set(campos_obligatorios + ["id"])
+            campos_permitidos = set(campos_obligatorios + ["hijos"])
             campos_invalidos = campos_recibidos - campos_permitidos
 
             if campos_invalidos:
