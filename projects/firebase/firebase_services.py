@@ -50,11 +50,19 @@ def get_usuario_completo(request):
             headers["Content-Type"] = "application/json"
             data = json.loads(request.body)
 
+            uid = request.GET.get("uid")
+            if not uid:
+                return {
+                    "code": "400",
+                    "error": "Falta el parámetro 'uid' en la URL"
+                }
+
             campos_permitidos = {
                 "nombre", "apellidos", "dni", "telefono", "telefonoEmergencia",
                 "direccion", "genero", "ocupacion", "nacionalidad", "estadoCivil",
                 "fechaInscripcion", "role", "suscripcion", "autorizacionFotos",
-                "autorizacionExcursiones", "custodia", "seguroMedico", "cuotaPagada", "hijos", "tokenFCM"
+                "autorizacionExcursiones", "custodia", "seguroMedico",
+                "cuotaPagada", "hijos", "tokenFCM"
             }
 
             campos_recibidos = set(data.keys())
@@ -66,22 +74,30 @@ def get_usuario_completo(request):
                     "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
                 }
 
-            # Transforma solo los campos que se quieren actualizar
+            # Transforma los datos a formato Firestore
             datos_transformados = transformar_a_firestore_fields(data)
 
-            # Añade updateMask
-            update_mask = ",".join(data.keys())
-            url_patch = f"{url}?updateMask.fieldPaths={update_mask.replace(',', '&updateMask.fieldPaths=')}"
+            # Construye el updateMask para que Firestore sepa qué campos actualizar
+            update_mask = "&".join([f"updateMask.fieldPaths={campo}" for campo in data.keys()])
 
+            # URL completa con ID del documento y updateMask
+            url_patch = f"{os.getenv('URL_USUARIO')}{uid}?{update_mask}"
+
+            # Llama al PATCH
             response = requests.patch(url_patch, headers=headers, json=datos_transformados)
 
             if response.status_code not in [200, 201]:
                 raise Exception(f"Error {response.status_code}: {response.text}")
 
-            return {"code": "200", "message": "Usuario modificado correctamente", "uid": uid}
-        
+            return {
+                "code": "200",
+                "message": "Usuario modificado correctamente",
+                "uid": uid
+            }
+
         except Exception as e:
             return {"code": "500", "error": str(e)}
+
 
 
     elif request.method == "POST":
