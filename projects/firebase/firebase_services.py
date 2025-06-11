@@ -29,51 +29,61 @@ load_dotenv()
 def get_usuario_completo(request):
     token = obtener_token_acceso()
     uid = request.GET.get("uid")
-    project_id = os.getenv("PROJECT_ID")
-
+    
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
 
-    base_url = os.getenv('URL_USUARIOS')
-
     if request.method == "GET":
         try:
             if not uid:
-                response = requests.get(base_url, headers=headers)
+                # Obtener todos los usuarios (solo id, nombre y apellidos)
+                url = os.getenv('URL_USUARIO')
+                response = requests.get(url, headers=headers)
+                
+                if response.status_code != 200:
+                    return {"code": "500", "error": f"Error al obtener usuarios: {response.status_code}: {response.text}"}
+                print(response.text)
+                try:
+                    usuarios_data = response.json()
+                    if "documents" not in usuarios_data:
+                        return {
+                            "code": "500",
+                            "error": "Formato de respuesta inesperado",
+                            "response_sample": str(data)[:200]
+                        }
+                    usuarios = []
+                    for doc in usuarios_data["documents"]:
+                        doc_id = doc["name"].split("/")[-1]
+                        fields = doc.get("fields", {})
+                        
+                        usuarios.append({
+                            "id": doc_id,
+                            "nombre": fields.get("nombre", {}).get("stringValue", ""),
+                            "apellidos": fields.get("apellidos", {}).get("stringValue", "")
+                        })
+                    
+                    return {"code": "200", "message": usuarios}
+                except ValueError:
+                    return {"code": "500", "error": "La respuesta no es un JSON válido"}
+            else:
+                # Obtener usuario específico
+                url = f"{os.getenv('URL_USUARIO')}{uid}"
+                response = requests.get(url, headers=headers)
 
                 if response.status_code != 200:
-                    return {"code": "500", "error": f"{response.status_code}: {response.text}"}
+                    return {"code": "500", "error": f"Error al obtener usuario: {response.status_code}: {response.text}"}
 
-                docs = response.json().get("documents", [])
-                usuarios_resumen = []
-
-                for doc in docs:
-                    doc_fields = doc.get("fields", {})
-                    nombre = doc_fields.get("nombre", {}).get("stringValue", "")
-                    apellidos = doc_fields.get("apellidos", {}).get("stringValue", "")
-                    doc_id = doc["name"].split("/")[-1]
-
-                    usuarios_resumen.append({
-                        "id": doc_id,
-                        "nombre": nombre,
-                        "apellidos": apellidos
-                    })
-
-                return {"code": "200", "usuarios": usuarios_resumen}
-            url = f"{base_url}/{uid}"
-            response = requests.get(url, headers=headers)
-
-            if response.status_code != 200:
-                return {"code": "500", "error": f"{response.status_code}: {response.text}"}
-
-            doc = response.json()
-            usuario = parse_usuario_document(doc)
-            return {"code": "200", "message": usuario}
-
+                try:
+                    doc = response.json()
+                    usuario = parse_usuario_document(doc)
+                    return {"code": "200", "message": usuario}
+                except ValueError:
+                    return {"code": "500", "error": "La respuesta del usuario no es un JSON válido"}
+                
         except Exception as e:
-            return {"code": "500", "error": str(e)}
+            return {"code": "500", "error": f"Error inesperado: {str(e)}"}
 
     elif request.method == "PATCH":
         try:
