@@ -102,8 +102,9 @@ def get_usuario_completo(request):
             data = json.loads(request.body)
             project_id = os.getenv('PROJECT_ID')
 
-            if not uid:
-                return {"code": "400", "error": "Falta el campo 'id'"}
+            id_usuario = data.get("id")
+            if not id_usuario:
+                return {"code": "400", "error": "Falta el campo 'id' en el cuerpo de la solicitud"}
 
             campos_obligatorios = [
                 "nombre", "apellidos", "dni", "telefono", "telefonoEmergencia",
@@ -117,26 +118,30 @@ def get_usuario_completo(request):
                 return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(campos_faltantes)}"}
 
             campos_recibidos = set(data.keys())
-            campos_permitidos = set(campos_obligatorios + ["hijos"])
+            campos_permitidos = set(campos_obligatorios + ["hijos", "id"])  # Añadir "id" a los campos permitidos
             campos_invalidos = campos_recibidos - campos_permitidos
 
             if campos_invalidos:
                 return {"code": "400", "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"}
 
-            datos_transformados = transformar_a_firestore_fields(data)
+            # Eliminar el campo 'id' del data para que no se incluya en los fields
+            data_sin_id = {k: v for k, v in data.items() if k != "id"}
+            datos_transformados = transformar_a_firestore_fields(data_sin_id)
 
             # URL para crear un documento con ID específico
-            urlPost = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios?documentId={uid}"
+            urlPost = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios?documentId={id_usuario}"
             
-            # Usamos POST con el documentId en la URL para crear un nuevo documento
-            response = requests.post(urlPost, headers=headers, json={
-                "fields": datos_transformados["fields"]
-            })
+            # Usamos POST para crear un nuevo documento
+            response = requests.post(
+                urlPost, 
+                headers=headers, 
+                json={"fields": datos_transformados["fields"]}
+            )
 
             if response.status_code not in [200, 201]:
                 raise Exception(f"Error {response.status_code}: {response.text}")
 
-            return {"code": "201", "message": "Usuario creado correctamente", "uid": uid}
+            return {"code": "201", "message": "Usuario creado correctamente", "uid": id_usuario}
 
         except Exception as e:
             return {"code": "500", "error": str(e)}
