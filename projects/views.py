@@ -20,16 +20,22 @@ def token(request):
 @csrf_exempt
 def usuario(request):
     try:
+        if request.method == "POST":
+            result = get_usuario_completo(request)
+            if isinstance(result, dict) and str(result.get("code")) in ("200", "201"):
+                return JsonResponse(result, status=int(result["code"]))
+            return JsonResponse(result if result else {'code': "400", 'error': "Error en la solicitud"}, status=400)
+        
         usuario_data = get_usuario_completo(request)
-        if isinstance(usuario_data, dict) and str(usuario_data.get("code")) in ("200", "201"):
-            return JsonResponse(usuario_data, status=int(usuario_data["code"]))
+        if isinstance(usuario_data, dict) and str(usuario_data.get("code")) == "200":
+            return JsonResponse(usuario_data, status=200)
 
         administrador_data = get_administradores_completo(request)
         if administrador_data is None:
             return JsonResponse({'code': "404", 'error': "Datos no disponibles"}, status=404)
             
-        if isinstance(administrador_data, dict) and str(administrador_data.get("code")) in ("200", "201"):
-            return JsonResponse(administrador_data, status=int(administrador_data["code"]))
+        if isinstance(administrador_data, dict) and str(administrador_data.get("code")) == "200":
+            return JsonResponse(administrador_data, status=200)
 
         return JsonResponse({'code': "404", 'error': "Usuario no encontrado"}, status=404)
 
