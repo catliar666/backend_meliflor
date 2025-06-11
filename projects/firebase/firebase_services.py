@@ -78,14 +78,9 @@ def get_usuario_completo(request):
             # Transforma los datos a formato Firestore
             datos_transformados = transformar_a_firestore_fields(data)
 
-            # Construye el updateMask para que Firestore sepa qué campos actualizar
-            update_mask = "&".join([f"updateMask.fieldPaths={campo}" for campo in data.keys()])
-
-            # URL completa con ID del documento y updateMask
-            url_patch = f"{os.getenv('URL_USUARIO')}{uid}?{update_mask}"
 
             # Llama al PATCH
-            response = requests.patch(url_patch, headers=headers, json=datos_transformados)
+            response = requests.patch(url, headers=headers, json=datos_transformados)
 
             if response.status_code not in [200, 201]:
                 raise Exception(f"Error {response.status_code}: {response.text}")
