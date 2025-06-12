@@ -15,6 +15,7 @@ from .parsers.mochilas_parse import parse_mochila_document
 from .parsers.ausencias_parse import parse_ausencia_document
 from .parsers.consumo_parse import parse_consumo_document
 from .parsers.notas_parse import parse_notas_document
+from .parsers.platos_parse import parse_plato_document
 from .helpers import transformar_a_firestore_fields, validar_horario_string
 from datetime import datetime, timedelta
 
@@ -121,16 +122,7 @@ def get_usuario_completo(request):
             update_mask = "&".join([f"updateMask.fieldPaths={campo}" for campo in data.keys()])
             url = f"{os.getenv('URL_USUARIO')}{uid}?{update_mask}"
 
-
-            print("📤 PATCH a Firestore")
-            print("➡️ URL:", url)
-            print("➡️ Headers:", headers)
-            print("➡️ Body enviado:", datos_transformados)
-
             response = requests.patch(url, headers=headers, json=datos_transformados)
-
-            print("⬅️ Status code:", response.status_code)
-            print("⬅️ Respuesta:", response.text)
 
             if response.status_code not in [200, 201]:
                 raise Exception(f"Error {response.status_code}: {response.text}")
@@ -142,12 +134,6 @@ def get_usuario_completo(request):
             }
 
         except Exception as e:
-            print("❌ Excepción durante PATCH:")
-            print("🧾 Request body original:", request.body)
-            print("📦 Headers:", headers)
-            print("📍 UID:", uid)
-            print("🔧 Traceback:\n", traceback.format_exc())
-
             return {"code": "500", "error": str(e)}
 
 
@@ -179,14 +165,11 @@ def get_usuario_completo(request):
             if campos_invalidos:
                 return {"code": "400", "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"}
 
-            # Eliminar el campo 'id' del data para que no se incluya en los fields
             data_sin_id = {k: v for k, v in data.items() if k != "id"}
             datos_transformados = transformar_a_firestore_fields(data_sin_id)
 
-            # URL para crear un documento con ID específico
             urlPost = f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/usuarios?documentId={id_usuario}"
-            
-            # Usamos POST para crear un nuevo documento
+
             response = requests.post(
                 urlPost, 
                 headers=headers, 
@@ -389,11 +372,6 @@ def get_notas_alumno(request):
             url_notas = os.getenv('URL_NOTAS')
             response = requests.post(url_notas, headers=headers, json=firestore_payload)
             if response.status_code not in [200, 201]:
-                print("❌ ERROR al guardar nota en Firestore")
-                print("🔢 Status:", response.status_code)
-                print("📩 Payload enviado:", json.dumps(firestore_payload, indent=2))
-                print("🧾 Respuesta de Firestore:", response.text)
-
                 return {
                     "code": str(response.status_code),
                     "error": f"Firestore error: {response.text}"
@@ -554,8 +532,10 @@ def get_alumnos(request):
             data = json.loads(request.body)
 
             firestore_payload = transformar_a_firestore_fields(data)
+            update_mask = "&".join([f"updateMask.fieldPaths={campo}" for campo in data.keys()])
+            urlMask = f"{url_uid}?{update_mask}"
 
-            response = requests.patch(url_uid, headers=headers, json=firestore_payload)
+            response = requests.patch(urlMask, headers=headers, json=firestore_payload)
 
             if response.status_code not in [200, 204]:
                 return {"code": str(response.status_code), "error": response.text}
@@ -706,7 +686,10 @@ def get_noticias(request):
             url_patch = f"{base_url}{uid}"
             payload = {"fields": campos_actualizados}
 
-            response = requests.patch(url_patch, headers=headers, json=payload)
+            update_mask = "&".join([f"updateMask.fieldPaths={campo}" for campo in data.keys()])
+            urlMask = f"{url_patch}?{update_mask}"
+
+            response = requests.patch(urlMask, headers=headers, json=payload)
 
             if response.status_code not in [200, 204]:
                 return {"code": str(response.status_code), "error": response.text}
@@ -948,7 +931,10 @@ def get_medicamentos(request):
 
             firestore_payload = transformar_a_firestore_fields(data)
 
-            response = requests.patch(url_uid, headers=headers, json=firestore_payload)
+            update_mask = "&".join([f"updateMask.fieldPaths={campo}" for campo in data.keys()])
+            urlMask = f"{url_uid}?{update_mask}"
+
+            response = requests.patch(urlMask, headers=headers, json=firestore_payload)
 
             if response.status_code not in [200, 204]:
                 return {"code": str(response.status_code), "error": response.text}
@@ -1057,8 +1043,10 @@ def get_alergias(request):
             if not campos_actualizados:
                 return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
 
+            update_mask = "&".join([f"updateMask.fieldPaths={campo}" for campo in data.keys()])
+            urlMask = f"{url_uid}?{update_mask}"
 
-            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+            response = requests.patch(urlMask, headers=headers, json={"fields": campos_actualizados})
 
             if response.status_code not in [200, 204]:
                 return {"code": str(response.status_code), "error": response.text}
@@ -1768,6 +1756,116 @@ def get_ausencias(request):
             else:
                 documentos = data.get("documents", [])
                 ausencia = [parse_ausencia_document(doc) for doc in documentos]
+                return {"code": "200", "message": ausencia}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            campos_obligatorios = ["notificado", "estado", "fechaNotificacion", "fecha", "comentarios", "motivo", "justificado"]
+            campos_opcionales=["motivoJustificacion"]
+            faltantes = [campo for campo in campos_obligatorios if campo not in data]
+
+            if faltantes:
+                return {"code": "400", "error": f"Faltan campos obligatorios: {', '.join(faltantes)}"}
+            
+            campos_recibidos = set(data.keys())
+            campos_permitidos = set(campos_obligatorios + campos_opcionales)
+            campos_invalidos = campos_recibidos - campos_permitidos
+
+            if campos_invalidos:
+                return {
+                    "code": "400",
+                    "error": f"Campos no permitidos: {', '.join(campos_invalidos)}"
+                }
+
+
+            firestore_payload = transformar_a_firestore_fields(data)
+
+            response = requests.post(base_url, headers=headers, json=firestore_payload)
+
+            if response.status_code not in [200, 201]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            doc = response.json()
+            document_path = doc.get("name", "")
+            document_id = document_path.split("/")[-1]
+
+
+            return {"code": "201", "message": "Consumo añadido correctamente", "id": document_id}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    elif request.method == "PATCH":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para actualizar el consumo"}
+
+            data = json.loads(request.body)
+            campos_actualizados = {}
+
+            campos_actualizados = transformar_a_firestore_fields(data)
+
+            if not campos_actualizados:
+                return {"code": "400", "error": "No se proporcionaron campos para actualizar"}
+
+            response = requests.patch(url_uid, headers=headers, json={"fields": campos_actualizados})
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+
+            return {"code": "200", "message": f"Consumo '{uid}' actualizado correctamente"}
+
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+    elif request.method == "DELETE":
+        try:
+            if not uid:
+                return {"code": "400", "error": "Se requiere 'uid' para eliminar un consumo"}
+
+            response = requests.delete(url_uid, headers=headers)
+
+            if response.status_code not in [200, 204]:
+                return {"code": str(response.status_code), "error": response.text}
+            return {"code": "200", "message": f"Consumo '{uid}' eliminado correctamente"}
+        except Exception as e:
+            return {"code": "500", "error": str(e)}
+
+    return {"code": "405", "error": "Método no permitido"}
+
+
+def get_platos(request):
+    token = obtener_token_acceso()
+    base_url = os.getenv('URL_PLATOS')
+    uid = request.GET.get("uid")
+    url_uid = f"{base_url}{uid}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    if request.method == "GET":
+        try:
+            if uid:
+                response = requests.get(url_uid, headers=headers)
+            else:
+                response = requests.get(base_url, headers=headers)
+
+            if response.status_code != 200:
+                return {"code": "500", "error": response.text}
+
+            data = response.json()
+
+            if uid:
+                ausencia = parse_plato_document(data)
+                return {"code": "200", "message": ausencia}
+            else:
+                documentos = data.get("documents", [])
+                ausencia = [parse_plato_document(doc) for doc in documentos]
                 return {"code": "200", "message": ausencia}
 
         except Exception as e:

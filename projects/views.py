@@ -2,7 +2,7 @@
 
 from django.http import JsonResponse
 from projects.firebase.auth import obtener_token_acceso
-from .firebase.firebase_services import get_usuario_completo, get_administradores_completo, obtener_menu_de_la_semana, get_enfermedades, get_notas_alumno, get_alumnos, get_noticias, enviar_notificacion, get_medicamentos, get_alergias, get_necesidades, get_conflictos, get_rutina, get_mochilas, get_consumo, get_ausencias
+from .firebase.firebase_services import get_usuario_completo, get_administradores_completo, get_platos, obtener_menu_de_la_semana, get_enfermedades, get_notas_alumno, get_alumnos, get_noticias, enviar_notificacion, get_medicamentos, get_alergias, get_necesidades, get_conflictos, get_rutina, get_mochilas, get_consumo, get_ausencias
 from .firebase.parsers.usuarios_parse import parse_usuario_document
 from .firebase.parsers.alumnos_parse import parse_alumno_document
 from django.views.decorators.csrf import csrf_exempt
@@ -154,6 +154,14 @@ def consumo(request):
     try:
         consumo =  get_consumo(request)
         return JsonResponse(consumo, status=consumo['code'], safe=False)
+    except Exception as e:
+         return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
+    
+@csrf_exempt
+def plato(request):
+    try:
+        platos =  get_platos(request)
+        return JsonResponse(platos, status=platos['code'], safe=False)
     except Exception as e:
          return JsonResponse({'code': str('500'), 'error': str(e)}, status=500)
     
