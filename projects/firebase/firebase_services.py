@@ -56,14 +56,8 @@ def get_usuario_completo(request):
                         }
                     usuarios = []
                     for doc in usuarios_data["documents"]:
-                        doc_id = doc["name"].split("/")[-1]
-                        fields = doc.get("fields", {})
-                        
-                        usuarios.append({
-                            "id": doc_id,
-                            "nombre": fields.get("nombre", {}).get("stringValue", ""),
-                            "apellidos": fields.get("apellidos", {}).get("stringValue", "")
-                        })
+                        usuario = parse_usuario_document(doc)
+                        usuarios.append(usuario)
                     
                     return {"code": "200", "message": usuarios}
                 except ValueError:
