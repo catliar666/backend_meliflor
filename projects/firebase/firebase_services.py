@@ -650,7 +650,7 @@ def get_noticias(request):
         try:
             data = json.loads(request.body)
 
-            campos_obligatorios = ["descripcion", "fecha", "titulo"]
+            campos_obligatorios = ["descripcion", "fecha", "titulo", "foto"]
             faltantes = [campo for campo in campos_obligatorios if campo not in data]
             campos_invalidos = [campo for campo in data if campo not in campos_obligatorios]
 
